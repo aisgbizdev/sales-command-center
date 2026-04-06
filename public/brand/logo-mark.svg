@@ -1,0 +1,19 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sgb-bg" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF"/>
+      <stop offset="0.32" stop-color="#A7C6FF"/>
+      <stop offset="0.72" stop-color="#4E7DFF"/>
+      <stop offset="1" stop-color="#183B8C"/>
+    </linearGradient>
+    <linearGradient id="sgb-accent" x1="18" y1="18" x2="46" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="1" stop-color="#18243F"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#sgb-bg)"/>
+  <rect x="6.5" y="6.5" width="51" height="51" rx="15.5" stroke="white" stroke-opacity="0.26"/>
+  <rect x="15" y="15" width="34" height="34" rx="11" fill="url(#sgb-accent)"/>
+  <path d="M22 38.5C24.1 41 27.1 42.25 31 42.25C36.95 42.25 40.5 39.2 40.5 34.9C40.5 31.3 38.1 29.4 33.35 28.35L30.8 27.8C28.65 27.3 27.7 26.65 27.7 25.45C27.7 23.85 29.2 22.8 31.65 22.8C34.15 22.8 36.15 23.65 38 25.3L40.9 22.05C38.55 19.75 35.5 18.55 31.8 18.55C26.15 18.55 22.8 21.45 22.8 25.95C22.8 29.6 25.05 31.6 29.9 32.7L32.45 33.25C34.7 33.75 35.6 34.35 35.6 35.65C35.6 37.35 34 38.15 31.05 38.15C28.15 38.15 25.75 37.1 23.7 35.05L22 38.5Z" fill="white"/>
+  <path d="M43.25 19.5V28.25H52" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

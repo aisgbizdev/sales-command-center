@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('app.name') }}</title>
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('brand/logo-mark.svg') }}">
+
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
+</head>
+<body class="h-full font-outfit text-white" x-data="{ sidebarOpen: false, sidebarExpand: true }">
+    <div class="min-h-screen xl:flex">
+        <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden" @click="sidebarOpen = false"></div>
+
+        <aside
+            class="fixed left-0 top-0 z-50 flex h-screen w-[290px] -translate-x-full flex-col border-r border-white/10 bg-[rgba(11,14,19,0.94)] px-4 transition-transform duration-300 backdrop-blur-xl xl:translate-x-0"
+            :class="{ 'translate-x-0': sidebarOpen, 'xl:w-[90px]': !sidebarExpand, 'xl:w-[290px]': sidebarExpand }"
+        >
+            <div class="flex items-center gap-3 border-b border-white/10 px-2 py-6" :class="sidebarExpand ? 'justify-start' : 'xl:justify-center'">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
+                    <img x-cloak x-show="!sidebarExpand" src="{{ asset('brand/logo-mark.svg') }}" alt="Logo" class="h-9 w-9 rounded-lg">
+                    <img x-cloak x-show="sidebarExpand" src="{{ asset('brand/logo-word.svg') }}" alt="{{ config('app.name') }}" class="h-8 w-auto">
+                </a>
+            </div>
+
+            <nav class="mt-5 flex-1 space-y-1 overflow-y-auto pr-1">
+                <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-show="sidebarExpand">Menu</p>
+
+                <a href="{{ route('dashboard') }}"
+                    class="menu-item group {{ request()->routeIs('dashboard') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                    :class="{ 'xl:justify-center': !sidebarExpand }">
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" fill="currentColor"/></svg>
+                    </span>
+                    <span x-show="sidebarExpand">Dashboard</span>
+                </a>
+
+                <a href="{{ route('prospects.index') }}"
+                    class="menu-item group {{ request()->routeIs('prospects.index', 'prospects.create', 'prospects.store', 'prospects.show', 'prospects.edit', 'prospects.update') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                    :class="{ 'xl:justify-center': !sidebarExpand }">
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM4 21a8 8 0 0 1 16 0H4z" fill="currentColor"/></svg>
+                    </span>
+                    <span x-show="sidebarExpand">Prospek</span>
+                </a>
+
+                <a href="{{ route('prospects.pipeline') }}"
+                    class="menu-item group {{ request()->routeIs('prospects.pipeline') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                    :class="{ 'xl:justify-center': !sidebarExpand }">
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v4H4V4zm0 6h10v4H4v-4zm0 6h16v4H4v-4z" fill="currentColor"/></svg>
+                    </span>
+                    <span x-show="sidebarExpand">Pipeline</span>
+                </a>
+
+                @can('access-performance')
+                    <a href="{{ route('prospects.performance') }}"
+                        class="menu-item group {{ request()->routeIs('prospects.performance') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                        :class="{ 'xl:justify-center': !sidebarExpand }">
+                        <span class="menu-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M4 19h16v2H4v-2zM7 10h3v7H7v-7zm7-4h3v11h-3V6z" fill="currentColor"/></svg>
+                        </span>
+                        <span x-show="sidebarExpand">Kinerja</span>
+                    </a>
+                @endcan
+
+                @can('access-chat-reviews')
+                    <a href="{{ route('chat-reviews.index') }}"
+                        class="menu-item group {{ request()->routeIs('chat-reviews.*') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                        :class="{ 'xl:justify-center': !sidebarExpand }">
+                        <span class="menu-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v12H7l-3 3V4z" fill="currentColor"/></svg>
+                        </span>
+                        <span x-show="sidebarExpand">Tinjauan Obrolan</span>
+                    </a>
+                @endcan
+
+                @can('access-knowledge-queue')
+                    <a href="{{ route('knowledge-queue.index') }}"
+                        class="menu-item group {{ request()->routeIs('knowledge-queue.*') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                        :class="{ 'xl:justify-center': !sidebarExpand }">
+                        <span class="menu-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 3 7l9 5 9-5-9-5zm0 8-9-5v11l9 5 9-5V5l-9 5z" fill="currentColor"/></svg>
+                        </span>
+                        <span x-show="sidebarExpand">Antrian Pengetahuan</span>
+                    </a>
+                @endcan
+            </nav>
+        </aside>
+
+        <div class="flex-1 transition-all duration-300 xl:ml-[290px]" :class="{ 'xl:ml-[90px]': !sidebarExpand }">
+            <header class="sticky top-0 z-30 border-b border-white/10 bg-[rgba(10,13,18,0.72)] backdrop-blur-xl">
+                <div class="flex flex-wrap items-center gap-3 px-4 py-3 md:px-6">
+                    <button
+                        type="button"
+                        class="mobile-only-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200"
+                        @click="sidebarOpen = !sidebarOpen"
+                    >
+                        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="desktop-only-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200"
+                        @click="sidebarExpand = !sidebarExpand"
+                    >
+                        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none"><path d="M4 7h16M4 12h10M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+
+                    <div class="desktop-only-block relative w-full max-w-[500px]">
+                        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none"><path d="m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </span>
+                        <input type="text" placeholder="Search or type command..." class="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-12 pr-24 text-sm text-white placeholder:text-slate-500 focus:border-white/20 focus:outline-none focus:ring-4 focus:ring-white/5" />
+                        <kbd class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-xs text-slate-400">Ctrl K</kbd>
+                    </div>
+
+                    <div class="ml-auto flex items-center gap-2">
+                        <span class="desktop-only-inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+                            {{ auth()->user()->roleLabel() }}
+                        </span>
+
+                        <div class="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-2 py-1">
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-900">
+                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                            </span>
+                            <span class="desktop-only-inline pr-1 text-sm font-medium text-slate-100">{{ auth()->user()->name }}</span>
+                        </div>
+
+                        <form method="post" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="inline-flex h-10 items-center rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-100 hover:bg-white/10">
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-4 md:p-6">
+                @if (session('status'))
+                    <div class="alert">{{ session('status') }}</div>
+                @endif
+
+                @if ($errors->any())
+                    <ul class="error-list">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @yield('content')
+            </main>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<svg width="268" height="56" viewBox="0 0 268 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lockup-bg" x1="8" y1="6" x2="48" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF"/>
+      <stop offset="0.32" stop-color="#A7C6FF"/>
+      <stop offset="0.72" stop-color="#4E7DFF"/>
+      <stop offset="1" stop-color="#183B8C"/>
+    </linearGradient>
+    <linearGradient id="lockup-accent" x1="15" y1="15" x2="41" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="1" stop-color="#18243F"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="56" height="56" rx="18" fill="url(#lockup-bg)"/>
+  <rect x="2.5" y="2.5" width="51" height="51" rx="15.5" stroke="white" stroke-opacity="0.26"/>
+  <rect x="12" y="12" width="32" height="32" rx="10" fill="url(#lockup-accent)"/>
+  <path d="M18.5 36C20.47 38.35 23.29 39.52 26.95 39.52C32.54 39.52 35.88 36.65 35.88 32.59C35.88 29.2 33.63 27.41 29.16 26.42L26.76 25.91C24.74 25.47 23.84 24.86 23.84 23.73C23.84 22.22 25.25 21.23 27.56 21.23C29.91 21.23 31.8 22.03 33.54 23.58L36.27 20.52C34.06 18.36 31.19 17.24 27.71 17.24C22.4 17.24 19.25 19.96 19.25 24.19C19.25 27.62 21.37 29.5 25.93 30.53L28.33 31.04C30.44 31.5 31.29 32.07 31.29 33.3C31.29 34.9 29.78 35.65 27.01 35.65C24.28 35.65 22.03 34.67 20.1 32.74L18.5 36Z" fill="white"/>
+  <path d="M38.5 18V26.25H46.5" stroke="white" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="72" y="24" fill="#F8FAFC" font-family="Outfit, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.02em">SGB Sales</text>
+  <text x="72" y="43" fill="#8FA0BA" font-family="Outfit, Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="500" letter-spacing="0.16em">COMMAND CENTER</text>
+</svg>
