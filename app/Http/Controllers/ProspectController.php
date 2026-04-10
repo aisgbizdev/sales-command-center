@@ -192,6 +192,7 @@ class ProspectController extends Controller
 
         $oldLabel = Prospect::STATUS_LABELS[$prospect->status] ?? $prospect->status;
         $newLabel = Prospect::STATUS_LABELS[$validated['status']] ?? $validated['status'];
+        $quickNote = $validated['quick_note'] ?? null;
 
         $prospect->update([
             'status' => $validated['status'],
@@ -207,7 +208,7 @@ class ProspectController extends Controller
         ProspectLog::create([
             'log_date' => now()->toDateString(),
             'activity_type' => 'follow_up',
-            'summary' => $validated['quick_note'] ?: "Status diubah: {$oldLabel} -> {$newLabel}",
+            'summary' => filled($quickNote) ? $quickNote : "Status diubah: {$oldLabel} -> {$newLabel}",
             'result' => null,
             'gpt_used' => false,
             'gpt_mode' => $prospect->gpt_mode,

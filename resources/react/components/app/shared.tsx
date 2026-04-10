@@ -137,15 +137,17 @@ export function NativeSelect({
   onChange,
   options,
   placeholder,
+  className,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: Option[];
   placeholder: string;
+  className?: string;
 }) {
   return (
     <Select value={value || "all"} onValueChange={(next) => onChange(next === "all" ? "" : next)}>
-      <SelectTrigger>
+      <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

@@ -25,20 +25,79 @@ const quickUpdateSchema = z.object({
   bridge_candidate: z.boolean().optional(),
 });
 type QuickUpdateValues = z.infer<typeof quickUpdateSchema>;
+type PipelineColumn = PipelineResponse["columns"][number];
+type PipelineItem = PipelineColumn["items"][number];
+
+function moveItemToStatus(columns: PipelineColumn[], itemId: number, fromStatus: string, toStatus: string): PipelineColumn[] {
+  if (fromStatus === toStatus) return columns;
+
+  let movingItem: PipelineItem | null = null;
+
+  const withoutItem = columns.map((column) => {
+    if (column.status !== fromStatus) return column;
+    const nextItems = column.items.filter((item) => {
+      if (item.id !== itemId) return true;
+      movingItem = item;
+      return false;
+    });
+    return { ...column, items: nextItems, count: nextItems.length };
+  });
+
+  if (!movingItem) return columns;
+
+  return withoutItem.map((column) => {
+    if (column.status !== toStatus) return column;
+    const updatedItem: PipelineItem = {
+      ...movingItem,
+      status: toStatus,
+      statusLabel: column.label,
+    };
+    const nextItems = [updatedItem, ...column.items];
+    return { ...column, items: nextItems, count: nextItems.length };
+  });
+}
 
 export function PipelinePage() {
   const [location, setLocation] = useLocation();
   const queryString = getQueryString(location);
+  const queryClient = useQueryClient();
+  const [boardColumns, setBoardColumns] = React.useState<PipelineColumn[]>([]);
+  const [draggingItem, setDraggingItem] = React.useState<{ itemId: number; fromStatus: string; quickUpdateUrl: string } | null>(null);
+  const [dropTargetStatus, setDropTargetStatus] = React.useState<string | null>(null);
 
   const pipeline = useQuery({
     queryKey: ["pipeline", queryString],
     queryFn: () => fetchJson<PipelineResponse>(`/react-api/pipeline${queryString}`),
   });
 
+  React.useEffect(() => {
+    if (pipeline.data?.columns) {
+      setBoardColumns(pipeline.data.columns);
+    }
+  }, [pipeline.data?.columns]);
+
+  const dragMutation = useMutation({
+    mutationFn: ({ quickUpdateUrl, status }: { quickUpdateUrl: string; status: string }) =>
+      sendJson<{ message: string }>(quickUpdateUrl, { status }, "PATCH"),
+    onSuccess: async (data) => {
+      toast.success(data.message);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["pipeline"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["prospects"] }),
+        queryClient.invalidateQueries({ queryKey: ["performance"] }),
+      ]);
+    },
+    onError: async () => {
+      toast.error("Update status via drag & drop gagal.");
+      await queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+    },
+  });
+
   if (pipeline.isLoading) return <LoadingState label="Memuat pipeline..." />;
   if (pipeline.isError || !pipeline.data) return <ErrorState />;
 
-  const { columns, metrics, filters } = pipeline.data;
+  const { metrics, filters } = pipeline.data;
 
   return (
     <div className="space-y-4">
@@ -46,7 +105,7 @@ export function PipelinePage() {
         <CardHeader className="grid gap-4 lg:grid-cols-[1.5fr_minmax(320px,1fr)]">
           <div>
             <CardTitle className="text-3xl">Pipeline Board</CardTitle>
-            <CardDescription>Quick update tetap nembak endpoint backend yang sama, cuma shell UI-nya sekarang React.</CardDescription>
+            <CardDescription>Drag kartu ke kolom lain untuk update status, tetap nembak endpoint backend yang sama.</CardDescription>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <MiniMetric label="Overdue" value={metrics.overdueCount} variant="danger" />
@@ -69,9 +128,40 @@ export function PipelinePage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-4 2xl:grid-cols-7">
-        {columns.map((column) => (
-          <Card key={column.status} className="min-w-[300px]">
+      <div className="grid auto-cols-[minmax(320px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
+        {boardColumns.map((column) => (
+          <Card
+            key={column.status}
+            className={`min-w-0 transition ${dropTargetStatus === column.status ? "ring-2 ring-white/20" : ""}`}
+            onDragOver={(event) => {
+              if (!draggingItem) return;
+              event.preventDefault();
+              setDropTargetStatus(column.status);
+            }}
+            onDragLeave={() => {
+              if (dropTargetStatus === column.status) setDropTargetStatus(null);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDropTargetStatus(null);
+
+              if (!draggingItem || dragMutation.isPending) return;
+              if (draggingItem.fromStatus === column.status) {
+                setDraggingItem(null);
+                return;
+              }
+
+              setBoardColumns((prev) =>
+                moveItemToStatus(prev, draggingItem.itemId, draggingItem.fromStatus, column.status)
+              );
+
+              dragMutation.mutate({
+                quickUpdateUrl: draggingItem.quickUpdateUrl,
+                status: column.status,
+              });
+              setDraggingItem(null);
+            }}
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">{column.label}</CardTitle>
@@ -84,7 +174,18 @@ export function PipelinePage() {
                   Tidak ada prospek.
                 </div>
               ) : (
-                column.items.map((item) => <PipelineCard key={item.id} item={item} />)
+                column.items.map((item) => (
+                  <PipelineCard
+                    key={item.id}
+                    item={item}
+                    isDragging={draggingItem?.itemId === item.id}
+                    onDragStart={(payload) => setDraggingItem(payload)}
+                    onDragEnd={() => {
+                      setDraggingItem(null);
+                      setDropTargetStatus(null);
+                    }}
+                  />
+                ))
               )}
             </CardContent>
           </Card>
@@ -96,10 +197,17 @@ export function PipelinePage() {
 
 function PipelineCard({
   item,
+  isDragging,
+  onDragStart,
+  onDragEnd,
 }: {
   item: PipelineResponse["columns"][number]["items"][number];
+  isDragging: boolean;
+  onDragStart: (payload: { itemId: number; fromStatus: string; quickUpdateUrl: string }) => void;
+  onDragEnd: () => void;
 }) {
   const queryClient = useQueryClient();
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const form = useForm<QuickUpdateValues>({
     resolver: zodResolver(quickUpdateSchema),
     defaultValues: {
@@ -130,7 +238,16 @@ function PipelineCard({
   });
 
   return (
-    <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+    <div
+      draggable={item.canEdit}
+      onDragStart={(event) => {
+        if (!item.canEdit) return;
+        event.dataTransfer.effectAllowed = "move";
+        onDragStart({ itemId: item.id, fromStatus: item.status, quickUpdateUrl: item.quickUpdateUrl });
+      }}
+      onDragEnd={onDragEnd}
+      className={`rounded-[20px] border border-white/10 bg-white/5 p-4 ${item.canEdit ? "cursor-grab active:cursor-grabbing" : ""} ${isDragging ? "opacity-60" : ""}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium text-white">{item.name}</p>
@@ -147,14 +264,25 @@ function PipelineCard({
           {item.isOverdue ? <Badge variant="danger">Terlambat</Badge> : null}
           {item.bridgeCandidate ? <Badge variant="warn">Bridge Candidate</Badge> : null}
         </div>
-        <p>Follow Up: {item.nextFollowUpDateLabel}</p>
-        <p>GPT: {item.gptModeLabel}</p>
-        <p>Suhu: {item.userTemperatureLabel}</p>
-        <p>Emosi: {item.dominantEmotionLabel}</p>
-        <p>Bridge: {item.bridgeStatusLabel}</p>
       </div>
 
-      {item.canEdit ? (
+      <div className="mt-4">
+        <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setIsExpanded((prev) => !prev)}>
+          {isExpanded ? "Sembunyikan detail" : "Lihat detail"}
+        </Button>
+      </div>
+
+      {isExpanded ? (
+        <div className="mt-4 space-y-2 text-sm text-slate-400">
+          <p>Follow Up: {item.nextFollowUpDateLabel}</p>
+          <p>GPT: {item.gptModeLabel}</p>
+          <p>Suhu: {item.userTemperatureLabel}</p>
+          <p>Emosi: {item.dominantEmotionLabel}</p>
+          <p>Bridge: {item.bridgeStatusLabel}</p>
+        </div>
+      ) : null}
+
+      {item.canEdit && isExpanded ? (
         <form className="mt-4 space-y-3" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
           <select
             className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none"
@@ -198,10 +326,12 @@ function PipelineCard({
         </form>
       ) : null}
 
-      <a href={item.detailUrl} className="mt-4 inline-flex items-center gap-2 text-sm text-slate-200 hover:text-white">
-        Detail lengkap
-        <ArrowUpRight className="h-4 w-4" />
-      </a>
+      {isExpanded ? (
+        <a href={item.detailUrl} className="mt-4 inline-flex items-center gap-2 text-sm text-slate-200 hover:text-white">
+          Detail lengkap
+          <ArrowUpRight className="h-4 w-4" />
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -242,54 +372,62 @@ function PipelineFilters({
 
   return (
     <form
-      className="grid gap-3 md:grid-cols-2 xl:grid-cols-6"
+      className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-12"
       onSubmit={(event) => {
         event.preventDefault();
         onApply(buildQuery(form));
       }}
     >
       <Input
+        className="xl:col-span-3"
         value={form.q}
         onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))}
         placeholder="Cari cepat nama / perusahaan / kode"
       />
       <NativeSelect
+        className="xl:col-span-2"
         value={form.account_category}
         onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))}
         placeholder="Semua kategori"
         options={accountCategories}
       />
       <NativeSelect
+        className="xl:col-span-2"
         value={form.owner_id}
         onChange={(value) => setForm((prev) => ({ ...prev, owner_id: value }))}
         placeholder="Semua owner"
         options={salesUsers}
       />
       <NativeSelect
+        className="xl:col-span-2"
         value={form.gpt_mode}
         onChange={(value) => setForm((prev) => ({ ...prev, gpt_mode: value }))}
         placeholder="Semua mode GPT"
         options={gptModes}
       />
       <NativeSelect
+        className="xl:col-span-2"
         value={form.user_temperature}
         onChange={(value) => setForm((prev) => ({ ...prev, user_temperature: value }))}
         placeholder="Semua suhu user"
         options={userTemperatures}
       />
       <NativeSelect
+        className="xl:col-span-1"
         value={form.dominant_emotion}
         onChange={(value) => setForm((prev) => ({ ...prev, dominant_emotion: value }))}
         placeholder="Semua emosi"
         options={dominantEmotions}
       />
       <NativeSelect
+        className="xl:col-span-2"
         value={form.bridge_status}
         onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))}
         placeholder="Semua bridge status"
         options={bridgeStatuses}
       />
       <NativeSelect
+        className="xl:col-span-2"
         value={form.follow_up}
         onChange={(value) => setForm((prev) => ({ ...prev, follow_up: value }))}
         placeholder="Semua follow up"
@@ -299,8 +437,9 @@ function PipelineFilters({
           { value: "week", label: "7 Hari" },
         ]}
       />
-      <div className="flex gap-3 xl:col-span-2">
+      <div className="grid gap-3 md:grid-cols-2 xl:col-span-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <NativeSelect
+          className="w-full"
           value={form.bridge_candidate}
           onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
           placeholder="Semua bridge candidate"
@@ -310,12 +449,13 @@ function PipelineFilters({
           ]}
         />
         <NativeSelect
+          className="w-full"
           value={form.lost_reason}
           onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))}
           placeholder="Semua lost reason"
           options={lostReasons}
         />
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="secondary" className="w-full md:w-auto">
           Filter Board
         </Button>
       </div>
