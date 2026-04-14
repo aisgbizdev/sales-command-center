@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable, ErrorState, buildQuery, getQueryString, LoadingState, movePage, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, getQueryString, LoadingState, movePage, NativeSelect, statusVariant } from "@/components/app/shared";
 
 export function ProspectsPage() {
   const [location, setLocation] = useLocation();
   const queryString = getQueryString(location);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const prospects = useQuery({
     queryKey: ["prospects", queryString],
@@ -44,20 +45,29 @@ export function ProspectsPage() {
           ) : null}
         </CardHeader>
         <CardContent>
-          <ProspectFilters
-            current={filters.current}
-            statuses={filters.statuses}
-            accountCategories={filters.accountCategories}
-            gptModes={filters.gptModes}
-            userTemperatures={filters.userTemperatures}
-            dominantEmotions={filters.dominantEmotions}
-            bridgeStatuses={filters.bridgeStatuses}
-            lostReasons={filters.lostReasons}
-            salesUsers={filters.salesUsers}
-            onApply={(params) => setLocation(`/prospects${params ? `?${params}` : ""}`)}
-          />
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setFiltersOpen(true)}>
+            Buka Filter
+          </Button>
         </CardContent>
       </Card>
+
+      <OverlayModal open={filtersOpen} title="Filter Prospek" onClose={() => setFiltersOpen(false)}>
+        <ProspectFilters
+          current={filters.current}
+          statuses={filters.statuses}
+          accountCategories={filters.accountCategories}
+          gptModes={filters.gptModes}
+          userTemperatures={filters.userTemperatures}
+          dominantEmotions={filters.dominantEmotions}
+          bridgeStatuses={filters.bridgeStatuses}
+          lostReasons={filters.lostReasons}
+          salesUsers={filters.salesUsers}
+          onApply={(params) => {
+            setLocation(`/prospects${params ? `?${params}` : ""}`);
+            setFiltersOpen(false);
+          }}
+        />
+      </OverlayModal>
 
       <Card>
         <CardHeader>
@@ -185,21 +195,21 @@ function ProspectFilters({
     follow_up: current.follow_up ?? "",
   });
 
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-2 xl:grid-cols-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(buildQuery(form));
-      }}
-    >
-      <div className="xl:col-span-2">
-        <Input
-          value={form.q}
-          onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))}
-          placeholder="Cari nama, perusahaan, kode, atau nomor HP"
-        />
-      </div>
+	  return (
+	    <form
+	      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+	      onSubmit={(event) => {
+	        event.preventDefault();
+	        onApply(buildQuery(form));
+	      }}
+	    >
+	      <div className="sm:col-span-2 lg:col-span-3">
+	        <Input
+	          value={form.q}
+	          onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))}
+	          placeholder="Cari nama, perusahaan, kode, atau nomor HP"
+	        />
+	      </div>
       <NativeSelect
         value={form.account_category}
         onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))}
@@ -242,37 +252,37 @@ function ProspectFilters({
         placeholder="Semua bridge status"
         options={bridgeStatuses}
       />
-      <NativeSelect
-        value={form.lost_reason}
-        onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))}
-        placeholder="Semua lost reason"
-        options={lostReasons}
-      />
-      <div className="flex gap-3 xl:col-span-2">
-        <NativeSelect
-          value={form.bridge_candidate}
-          onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
-          placeholder="Semua bridge candidate"
-          options={[
-            { value: "true", label: "Bridge Candidate" },
-            { value: "false", label: "Bukan Bridge Candidate" },
-          ]}
-        />
-        <NativeSelect
-          value={form.follow_up}
-          onChange={(value) => setForm((prev) => ({ ...prev, follow_up: value }))}
-          placeholder="Semua follow up"
-          options={[
-            { value: "overdue", label: "Terlambat" },
-            { value: "today", label: "Hari Ini" },
-            { value: "week", label: "7 Hari" },
-          ]}
-        />
-        <Button type="submit" variant="secondary" className="shrink-0">
-          <Search className="h-4 w-4" />
-          Filter
-        </Button>
-      </div>
-    </form>
-  );
-}
+	      <NativeSelect
+	        value={form.lost_reason}
+	        onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))}
+	        placeholder="Semua lost reason"
+	        options={lostReasons}
+	      />
+	      <div className="grid gap-3 sm:col-span-2 lg:col-span-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+	        <NativeSelect
+	          value={form.bridge_candidate}
+	          onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
+	          placeholder="Semua bridge candidate"
+	          options={[
+	            { value: "true", label: "Bridge Candidate" },
+	            { value: "false", label: "Bukan Bridge Candidate" },
+	          ]}
+	        />
+	        <NativeSelect
+	          value={form.follow_up}
+	          onChange={(value) => setForm((prev) => ({ ...prev, follow_up: value }))}
+	          placeholder="Semua follow up"
+	          options={[
+	            { value: "overdue", label: "Terlambat" },
+	            { value: "today", label: "Hari Ini" },
+	            { value: "week", label: "7 Hari" },
+	          ]}
+	        />
+	        <Button type="submit" variant="secondary" className="w-full lg:w-auto">
+	          <Search className="h-4 w-4" />
+	          Filter
+	        </Button>
+	      </div>
+	    </form>
+	  );
+	}

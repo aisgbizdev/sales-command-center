@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ErrorState, LoadingState, buildQuery, getQueryString, movePage, NativeSelect } from "@/components/app/shared";
+import { ErrorState, LoadingState, OverlayModal, buildQuery, getQueryString, movePage, NativeSelect } from "@/components/app/shared";
 
 const noteTags: Option[] = [
   { value: "general", label: "General" },
@@ -30,6 +30,7 @@ const queuePriorities: Option[] = [
 export function ChatReviewsPage() {
   const [location, setLocation] = useLocation();
   const queryString = getQueryString(location);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const reviews = useQuery({
     queryKey: ["chat-reviews", queryString],
@@ -59,15 +60,24 @@ export function ChatReviewsPage() {
           ) : null}
         </CardHeader>
         <CardContent>
-          <ChatReviewFilters
-            current={filters.current}
-            outcomes={filters.outcomes}
-            statuses={filters.statuses}
-            accountCategories={filters.accountCategories}
-            onApply={(params) => setLocation(`/chat-reviews${params ? `?${params}` : ""}`)}
-          />
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setFiltersOpen(true)}>
+            Buka Filter
+          </Button>
         </CardContent>
       </Card>
+
+      <OverlayModal open={filtersOpen} title="Filter Tinjauan Obrolan" onClose={() => setFiltersOpen(false)}>
+        <ChatReviewFilters
+          current={filters.current}
+          outcomes={filters.outcomes}
+          statuses={filters.statuses}
+          accountCategories={filters.accountCategories}
+          onApply={(params) => {
+            setLocation(`/chat-reviews${params ? `?${params}` : ""}`);
+            setFiltersOpen(false);
+          }}
+        />
+      </OverlayModal>
 
       <div className="grid gap-4 xl:grid-cols-2">
         {items.length === 0 ? (
@@ -116,25 +126,25 @@ function ChatReviewFilters({
     account_category: current.account_category ?? "",
   });
 
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-2 xl:grid-cols-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(buildQuery(form));
-      }}
-    >
-      <Input value={form.q} onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))} placeholder="Cari judul, customer, atau perusahaan" />
-      <NativeSelect value={form.outcome} onChange={(value) => setForm((prev) => ({ ...prev, outcome: value }))} placeholder="Semua outcome" options={outcomes} />
-      <NativeSelect value={form.status} onChange={(value) => setForm((prev) => ({ ...prev, status: value }))} placeholder="Semua status" options={statuses} />
-      <NativeSelect value={form.account_category} onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))} placeholder="Semua kategori" options={accountCategories} />
-      <Button type="submit" variant="secondary">
-        <Search className="h-4 w-4" />
-        Filter
-      </Button>
-    </form>
-  );
-}
+	  return (
+	    <form
+	      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+	      onSubmit={(event) => {
+	        event.preventDefault();
+	        onApply(buildQuery(form));
+	      }}
+	    >
+	      <Input className="sm:col-span-2 lg:col-span-3" value={form.q} onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))} placeholder="Cari judul, customer, atau perusahaan" />
+	      <NativeSelect value={form.outcome} onChange={(value) => setForm((prev) => ({ ...prev, outcome: value }))} placeholder="Semua outcome" options={outcomes} />
+	      <NativeSelect value={form.status} onChange={(value) => setForm((prev) => ({ ...prev, status: value }))} placeholder="Semua status" options={statuses} />
+	      <NativeSelect value={form.account_category} onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))} placeholder="Semua kategori" options={accountCategories} />
+	      <Button type="submit" variant="secondary" className="sm:col-span-2 lg:col-span-3">
+	        <Search className="h-4 w-4" />
+	        Filter
+	      </Button>
+	    </form>
+	  );
+	}
 
 function ChatReviewCard({
   item,

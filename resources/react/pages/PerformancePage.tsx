@@ -9,11 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable, ErrorState, buildQuery, getQueryString, LoadingState, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, getQueryString, LoadingState, NativeSelect, statusVariant } from "@/components/app/shared";
 
 export function PerformancePage() {
   const [location, setLocation] = useLocation();
   const queryString = getQueryString(location);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const performance = useQuery({
     queryKey: ["performance", queryString],
@@ -33,19 +34,28 @@ export function PerformancePage() {
             <CardTitle className="text-3xl">Kinerja Penjualan</CardTitle>
             <CardDescription>Bandingkan workload, output, dan titik bocor follow up dari data backend yang sekarang.</CardDescription>
           </div>
-          <PerformanceFilters
-            current={filters.current}
-            accountCategories={filters.accountCategories}
-            gptModes={filters.gptModes}
-            userTemperatures={filters.userTemperatures}
-            dominantEmotions={filters.dominantEmotions}
-            bridgeStatuses={filters.bridgeStatuses}
-            lostReasons={filters.lostReasons}
-            salesUsers={filters.salesUsers}
-            onApply={(params) => setLocation(`/kinerja-penjualan${params ? `?${params}` : ""}`)}
-          />
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setFiltersOpen(true)}>
+            Buka Filter
+          </Button>
         </CardHeader>
       </Card>
+
+      <OverlayModal open={filtersOpen} title="Filter Kinerja Penjualan" onClose={() => setFiltersOpen(false)} maxWidthClass="max-w-[760px]">
+        <PerformanceFilters
+          current={filters.current}
+          accountCategories={filters.accountCategories}
+          gptModes={filters.gptModes}
+          userTemperatures={filters.userTemperatures}
+          dominantEmotions={filters.dominantEmotions}
+          bridgeStatuses={filters.bridgeStatuses}
+          lostReasons={filters.lostReasons}
+          salesUsers={filters.salesUsers}
+          onApply={(params) => {
+            setLocation(`/kinerja-penjualan${params ? `?${params}` : ""}`);
+            setFiltersOpen(false);
+          }}
+        />
+      </OverlayModal>
 
       <Card>
         <CardHeader>
@@ -167,42 +177,42 @@ function PerformanceFilters({
     owner_id: current.owner_id ?? "",
   });
 
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-2 xl:grid-cols-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(buildQuery(form));
-      }}
-    >
-      <Input type="date" value={form.from} onChange={(event) => setForm((prev) => ({ ...prev, from: event.target.value }))} />
-      <Input type="date" value={form.to} onChange={(event) => setForm((prev) => ({ ...prev, to: event.target.value }))} />
-      <NativeSelect
-        value={form.account_category}
-        onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))}
-        placeholder="Semua kategori"
-        options={accountCategories}
+	  return (
+	    <form
+	      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+	      onSubmit={(event) => {
+	        event.preventDefault();
+	        onApply(buildQuery(form));
+	      }}
+	    >
+	      <Input type="date" value={form.from} onChange={(event) => setForm((prev) => ({ ...prev, from: event.target.value }))} />
+	      <Input type="date" value={form.to} onChange={(event) => setForm((prev) => ({ ...prev, to: event.target.value }))} />
+	      <NativeSelect
+	        value={form.account_category}
+	        onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))}
+	        placeholder="Semua kategori"
+	        options={accountCategories}
       />
       <NativeSelect value={form.gpt_mode} onChange={(value) => setForm((prev) => ({ ...prev, gpt_mode: value }))} placeholder="Semua mode GPT" options={gptModes} />
       <NativeSelect value={form.user_temperature} onChange={(value) => setForm((prev) => ({ ...prev, user_temperature: value }))} placeholder="Semua suhu user" options={userTemperatures} />
       <NativeSelect value={form.dominant_emotion} onChange={(value) => setForm((prev) => ({ ...prev, dominant_emotion: value }))} placeholder="Semua emosi" options={dominantEmotions} />
       <NativeSelect value={form.owner_id} onChange={(value) => setForm((prev) => ({ ...prev, owner_id: value }))} placeholder="Semua owner" options={salesUsers} />
-      <NativeSelect value={form.bridge_status} onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))} placeholder="Semua bridge status" options={bridgeStatuses} />
-      <NativeSelect value={form.lost_reason} onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))} placeholder="Semua lost reason" options={lostReasons} />
-      <div className="flex gap-3 xl:col-span-2">
-        <NativeSelect
-          value={form.bridge_candidate}
-          onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
-          placeholder="Semua bridge candidate"
-          options={[
-            { value: "true", label: "Bridge Candidate" },
-            { value: "false", label: "Bukan Bridge Candidate" },
-          ]}
-        />
-        <Button type="submit" variant="secondary">
-          Terapkan
-        </Button>
-      </div>
-    </form>
-  );
-}
+	      <NativeSelect value={form.bridge_status} onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))} placeholder="Semua bridge status" options={bridgeStatuses} />
+	      <NativeSelect value={form.lost_reason} onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))} placeholder="Semua lost reason" options={lostReasons} />
+	      <div className="grid gap-3 sm:col-span-2 lg:col-span-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+	        <NativeSelect
+	          value={form.bridge_candidate}
+	          onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
+	          placeholder="Semua bridge candidate"
+	          options={[
+	            { value: "true", label: "Bridge Candidate" },
+	            { value: "false", label: "Bukan Bridge Candidate" },
+	          ]}
+	        />
+	        <Button type="submit" variant="secondary" className="w-full lg:w-auto">
+	          Terapkan
+	        </Button>
+	      </div>
+	    </form>
+	  );
+	}

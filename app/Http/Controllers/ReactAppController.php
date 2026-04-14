@@ -11,15 +11,15 @@ class ReactAppController extends Controller
         $user = $request->user();
         $path = trim($request->path(), '/');
 
-        if ($path === 'kinerja-penjualan') {
+        if (str_starts_with($path, 'kinerja-penjualan')) {
             abort_unless($user->can('access-performance'), 403);
         }
 
-        if ($path === 'chat-reviews') {
+        if (str_starts_with($path, 'chat-reviews')) {
             abort_unless($user->can('access-chat-reviews'), 403);
         }
 
-        if ($path === 'knowledge-queue') {
+        if (str_starts_with($path, 'knowledge-queue')) {
             abort_unless($user->can('access-knowledge-queue'), 403);
         }
 

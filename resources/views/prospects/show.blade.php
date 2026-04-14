@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="card">
-        <div class="hero-panel">
-            <div class="hero-copy">
-                <h2>{{ $prospect->prospect_code }} - {{ $prospect->name }}</h2>
-                <p>{{ $prospect->company ?: 'Belum ada nama perusahaan' }} | Owner: {{ $prospect->owner->name ?? '-' }}</p>
-                <div class="info-strip">
-                    <span class="badge info">{{ \App\Models\Prospect::ACCOUNT_CATEGORY_LABELS[$prospect->account_category] ?? strtoupper($prospect->account_category) }}</span>
-                    <span class="badge">{{ $statusLabels[$prospect->status] ?? strtoupper($prospect->status) }}</span>
-                </div>
-            </div>
+	    <section class="card">
+	        <div class="hero-panel">
+	            <div class="hero-copy">
+	                <h2 class="page-title">{{ $prospect->prospect_code }} - {{ $prospect->name }}</h2>
+	                <p class="page-subtitle">{{ $prospect->company ?: 'Belum ada nama perusahaan' }} | Owner: {{ $prospect->owner->name ?? '-' }}</p>
+	                <div class="info-strip">
+	                    <span class="badge info">{{ \App\Models\Prospect::ACCOUNT_CATEGORY_LABELS[$prospect->account_category] ?? strtoupper($prospect->account_category) }}</span>
+	                    <span class="badge">{{ $statusLabels[$prospect->status] ?? strtoupper($prospect->status) }}</span>
+	                </div>
+	            </div>
             <div class="mini-guide">
                 <h3>Apa yang bisa dilakukan di sini</h3>
                 <p><strong>Lihat detail:</strong> status, owner, nilai, dan follow up.</p>
