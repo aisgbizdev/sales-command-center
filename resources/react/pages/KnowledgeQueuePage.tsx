@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpenCheck, CheckCheck, Search, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import type { KnowledgeQueueResponse, Option } from "@/types";
 import { fetchJson, sendJson } from "@/lib/api";
@@ -10,11 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ErrorState, LoadingState, OverlayModal, buildQuery, getQueryString, movePage, NativeSelect } from "@/components/app/shared";
+import { ErrorState, LoadingState, OverlayModal, buildQuery, movePage, NativeSelect } from "@/components/app/shared";
 
 export function KnowledgeQueuePage() {
   const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const queryString = useSearch() ?? "";
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const queue = useQuery({

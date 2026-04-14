@@ -2,6 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { KanbanSquare, Plus } from "lucide-react";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import { boot, fetchJson } from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/utils";
@@ -10,11 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Option } from "@/types";
-import { DataTable, ErrorState, OverlayModal, buildQuery, getQueryString, LoadingState, MetricCard, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, MetricCard, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
 
 export function DashboardPage() {
-  const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const [, setLocation] = useLocation();
+  const queryString = useSearch() ?? "";
   const search = React.useMemo(() => new URLSearchParams(queryString), [queryString]);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 

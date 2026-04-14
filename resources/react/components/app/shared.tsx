@@ -16,7 +16,8 @@ export function statusVariant(status: string): "default" | "info" | "success" | 
 }
 
 export function getQueryString(location: string) {
-  const url = new URL(location, window.location.origin);
+  if (typeof window === "undefined") return "";
+  const url = toUrl(location);
   return url.search;
 }
 
@@ -29,9 +30,15 @@ export function buildQuery(values: Record<string, string>) {
 }
 
 export function movePage(location: string, setLocation: (path: string) => void, page: number) {
-  const url = new URL(location, window.location.origin);
+  const url = toUrl(location);
   url.searchParams.set("page", String(page));
   setLocation(`${url.pathname}${url.search}`);
+}
+
+function toUrl(location: string) {
+  const base = window.location.origin;
+  if (location.includes("?")) return new URL(location, base);
+  return new URL(`${location}${window.location.search}`, base);
 }
 
 export function MetricCard({ label, value, note }: { label: string; value: number; note: string }) {

@@ -2,6 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, Pencil, Plus, Search } from "lucide-react";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import type { Option, ProspectsResponse } from "@/types";
 import { fetchJson } from "@/lib/api";
@@ -10,11 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable, ErrorState, OverlayModal, buildQuery, getQueryString, LoadingState, movePage, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, movePage, NativeSelect, statusVariant } from "@/components/app/shared";
 
 export function ProspectsPage() {
   const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const queryString = useSearch() ?? "";
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const prospects = useQuery({

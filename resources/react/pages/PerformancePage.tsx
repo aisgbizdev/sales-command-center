@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import type { Option, PerformanceResponse } from "@/types";
 import { fetchJson } from "@/lib/api";
@@ -9,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable, ErrorState, OverlayModal, buildQuery, getQueryString, LoadingState, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, NativeSelect, statusVariant } from "@/components/app/shared";
 
 export function PerformancePage() {
-  const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const [, setLocation] = useLocation();
+  const queryString = useSearch() ?? "";
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const performance = useQuery({

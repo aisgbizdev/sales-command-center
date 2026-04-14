@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import type { Option, PipelineResponse } from "@/types";
 import { fetchJson, sendJson } from "@/lib/api";
@@ -13,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { buildQuery, ErrorState, OverlayModal, getQueryString, LoadingState, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { buildQuery, ErrorState, OverlayModal, LoadingState, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
 
 const quickUpdateSchema = z.object({
   status: z.string().min(1),
@@ -58,8 +59,8 @@ function moveItemToStatus(columns: PipelineColumn[], itemId: number, fromStatus:
 }
 
 export function PipelinePage() {
-  const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const [, setLocation] = useLocation();
+  const queryString = useSearch() ?? "";
   const queryClient = useQueryClient();
   const [boardColumns, setBoardColumns] = React.useState<PipelineColumn[]>([]);
   const [draggingItem, setDraggingItem] = React.useState<{ itemId: number; fromStatus: string; quickUpdateUrl: string } | null>(null);
@@ -138,7 +139,7 @@ export function PipelinePage() {
         />
       </OverlayModal>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid auto-cols-[minmax(320px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
         {boardColumns.map((column) => (
           <Card
             key={column.status}
