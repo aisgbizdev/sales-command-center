@@ -23,7 +23,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadingState } from "@/components/app/shared";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { ChatReviewsPage } from "@/pages/ChatReviewsPage";
-import { ChatReviewCreatePage, ChatReviewEditPage } from "@/pages/ChatReviewFormPage";
+import {
+    ChatReviewCreatePage,
+    ChatReviewEditPage,
+} from "@/pages/ChatReviewFormPage";
 import { ChatReviewDetailPage } from "@/pages/ChatReviewDetailPage";
 import { KnowledgeQueuePage } from "@/pages/KnowledgeQueuePage";
 import { PerformancePage } from "@/pages/PerformancePage";
@@ -124,16 +127,6 @@ function AppShell() {
                     );
                 })}
             </nav>
-
-            <div className="mt-8 rounded-[24px] border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                    Frontend Stack
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                    React, TypeScript, Wouter, TanStack Query, dan komponen
-                    shadcn-style di atas backend Laravel yang sama.
-                </p>
-            </div>
         </>
     );
 
@@ -255,42 +248,42 @@ function AppShell() {
                         </div>
                     </header>
 
-	                    <Switch>
-	                        <Route path="/dashboard" component={DashboardPage} />
-	                        <Route
-	                            path="/prospects/create"
-	                            component={ProspectCreatePage}
-	                        />
-	                        <Route
-	                            path="/prospects/:id/edit"
-	                            component={ProspectEditPage}
-	                        />
-	                        <Route
-	                            path="/prospects/:id"
-	                            component={ProspectDetailPage}
-	                        />
-	                        <Route path="/prospects" component={ProspectsPage} />
-	                        <Route path="/pipeline" component={PipelinePage} />
+                    <Switch>
+                        <Route path="/dashboard" component={DashboardPage} />
+                        <Route
+                            path="/prospects/create"
+                            component={ProspectCreatePage}
+                        />
+                        <Route
+                            path="/prospects/:id/edit"
+                            component={ProspectEditPage}
+                        />
+                        <Route
+                            path="/prospects/:id"
+                            component={ProspectDetailPage}
+                        />
+                        <Route path="/prospects" component={ProspectsPage} />
+                        <Route path="/pipeline" component={PipelinePage} />
                         <Route
                             path="/kinerja-penjualan"
                             component={PerformancePage}
                         />
-		                        <Route
-		                            path="/chat-reviews/create"
-		                            component={ChatReviewCreatePage}
-		                        />
-		                        <Route
-		                            path="/chat-reviews/:id/edit"
-		                            component={ChatReviewEditPage}
-		                        />
-		                        <Route
-		                            path="/chat-reviews/:id"
-		                            component={ChatReviewDetailPage}
-		                        />
-		                        <Route
-		                            path="/chat-reviews"
-		                            component={ChatReviewsPage}
-		                        />
+                        <Route
+                            path="/chat-reviews/create"
+                            component={ChatReviewCreatePage}
+                        />
+                        <Route
+                            path="/chat-reviews/:id/edit"
+                            component={ChatReviewEditPage}
+                        />
+                        <Route
+                            path="/chat-reviews/:id"
+                            component={ChatReviewDetailPage}
+                        />
+                        <Route
+                            path="/chat-reviews"
+                            component={ChatReviewsPage}
+                        />
                         <Route
                             path="/knowledge-queue"
                             component={KnowledgeQueuePage}

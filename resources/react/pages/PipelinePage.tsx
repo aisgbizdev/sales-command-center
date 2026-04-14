@@ -138,7 +138,7 @@ export function PipelinePage() {
         />
       </OverlayModal>
 
-      <div className="grid auto-cols-[minmax(320px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {boardColumns.map((column) => (
           <Card
             key={column.status}
