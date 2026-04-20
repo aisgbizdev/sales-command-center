@@ -276,9 +276,16 @@ class ProspectController extends Controller
     {
         $user = $request->user();
         $this->authorize('view', $prospect);
+        $whatsAppConversation = $prospect->whatsAppConversations()
+            ->with([
+                'messages' => fn (Builder $q) => $q->latest('sent_at')->latest('id')->limit(50),
+            ])
+            ->orderByDesc('last_message_at')
+            ->first();
 
         return view('prospects.show', [
             'prospect' => $prospect->load(['owner:id,name', 'team:id,name', 'unit:id,name', 'logs.user:id,name']),
+            'whatsAppConversation' => $whatsAppConversation,
             'types' => ProspectLog::TYPES,
             'statusLabels' => Prospect::STATUS_LABELS,
             'canEditProspect' => $user->canEditProspect($prospect),

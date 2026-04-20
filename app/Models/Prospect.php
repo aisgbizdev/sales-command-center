@@ -147,4 +147,14 @@ class Prospect extends Model
     {
         return $this->hasMany(ProspectLog::class);
     }
+
+    public function whatsAppConversations(): HasMany
+    {
+        return $this->hasMany(WhatsAppConversation::class);
+    }
+
+    public function whatsAppMessages(): HasMany
+    {
+        return $this->hasMany(WhatsAppMessage::class);
+    }
 }

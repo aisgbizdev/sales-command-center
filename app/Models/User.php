@@ -92,6 +92,11 @@ class User extends Authenticatable
         return $this->hasMany(ProspectLog::class);
     }
 
+    public function whatsAppConversations(): HasMany
+    {
+        return $this->hasMany(WhatsAppConversation::class, 'owner_id');
+    }
+
     public function chatReviews(): HasMany
     {
         return $this->hasMany(ChatReview::class, 'submitted_by');

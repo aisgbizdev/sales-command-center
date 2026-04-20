@@ -80,6 +80,54 @@
     @endif
 
     <section class="card">
+        <h3 style="margin-top:0;">Monitoring Chat WhatsApp</h3>
+        <p class="form-section-copy">Thread ini disinkronkan dari nomor pusat WhatsApp Business. Untuk tahap awal mode monitoring masih read-only.</p>
+
+        @if($whatsAppConversation)
+            <div class="row" style="margin-top:10px;">
+                <div class="kpi-box"><h4>Kontak WA</h4><strong>{{ $whatsAppConversation->contact_name ?: '-' }}</strong></div>
+                <div class="kpi-box"><h4>Nomor</h4><strong>{{ $whatsAppConversation->prospect_phone ?: '-' }}</strong></div>
+                <div class="kpi-box"><h4>Pesan Belum Dibaca</h4><strong>{{ $whatsAppConversation->unread_for_owner }}</strong></div>
+                <div class="kpi-box"><h4>Pesan Terakhir</h4><strong>{{ $whatsAppConversation->last_message_at?->format('d M Y H:i') ?: '-' }}</strong></div>
+            </div>
+
+            <div class="table-wrap" style="margin-top:12px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Arah</th>
+                            <th>Pesan</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($whatsAppConversation->messages->sortBy(fn ($item) => $item->sent_at?->timestamp ?? $item->created_at?->timestamp) as $message)
+                            <tr>
+                                <td>{{ $message->sent_at?->format('d M Y H:i') ?: '-' }}</td>
+                                <td>
+                                    @if($message->direction === 'inbound')
+                                        <span class="badge info">Masuk</span>
+                                    @else
+                                        <span class="badge">Keluar</span>
+                                    @endif
+                                </td>
+                                <td>{{ $message->body ?: '['.strtoupper($message->message_type).']' }}</td>
+                                <td>{{ strtoupper($message->status ?: '-') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="empty-state">
+                <strong>Belum ada chat WhatsApp yang tersinkron.</strong>
+                Chat akan muncul otomatis begitu webhook WhatsApp menerima pesan masuk untuk nomor prospek ini.
+            </div>
+        @endif
+    </section>
+
+    <section class="card">
         <h3 style="margin-top:0;">Riwayat Input Harian</h3>
         <div class="table-wrap">
             <table>

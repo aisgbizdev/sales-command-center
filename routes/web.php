@@ -7,7 +7,11 @@ use App\Http\Controllers\KnowledgeUpdateQueueController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\ReactApiController;
 use App\Http\Controllers\ReactAppController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('webhooks.whatsapp.receive');
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLogin'])->name('login');

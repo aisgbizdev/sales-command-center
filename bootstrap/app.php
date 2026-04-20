@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust proxy headers (X-Forwarded-Proto/Host) for tunnels like ngrok
         // so generated URLs keep https scheme.
         $middleware->trustProxies(at: '*');
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/whatsapp',
+        ]);
 
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
