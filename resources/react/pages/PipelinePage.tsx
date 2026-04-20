@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import type { Option, PipelineResponse } from "@/types";
 import { fetchJson, sendJson } from "@/lib/api";
@@ -13,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { buildQuery, ErrorState, getQueryString, LoadingState, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { buildQuery, ErrorState, OverlayModal, LoadingState, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
 
 const quickUpdateSchema = z.object({
   status: z.string().min(1),
@@ -58,12 +59,13 @@ function moveItemToStatus(columns: PipelineColumn[], itemId: number, fromStatus:
 }
 
 export function PipelinePage() {
-  const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const [, setLocation] = useLocation();
+  const queryString = useSearch() ?? "";
   const queryClient = useQueryClient();
   const [boardColumns, setBoardColumns] = React.useState<PipelineColumn[]>([]);
   const [draggingItem, setDraggingItem] = React.useState<{ itemId: number; fromStatus: string; quickUpdateUrl: string } | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = React.useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const pipeline = useQuery({
     queryKey: ["pipeline", queryString],
@@ -114,19 +116,28 @@ export function PipelinePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <PipelineFilters
-            current={filters.current}
-            accountCategories={filters.accountCategories}
-            gptModes={filters.gptModes}
-            userTemperatures={filters.userTemperatures}
-            dominantEmotions={filters.dominantEmotions}
-            bridgeStatuses={filters.bridgeStatuses}
-            lostReasons={filters.lostReasons}
-            salesUsers={filters.salesUsers}
-            onApply={(params) => setLocation(`/pipeline${params ? `?${params}` : ""}`)}
-          />
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setFiltersOpen(true)}>
+            Buka Filter
+          </Button>
         </CardContent>
       </Card>
+
+      <OverlayModal open={filtersOpen} title="Filter Pipeline Board" onClose={() => setFiltersOpen(false)} maxWidthClass="max-w-[760px]">
+        <PipelineFilters
+          current={filters.current}
+          accountCategories={filters.accountCategories}
+          gptModes={filters.gptModes}
+          userTemperatures={filters.userTemperatures}
+          dominantEmotions={filters.dominantEmotions}
+          bridgeStatuses={filters.bridgeStatuses}
+          lostReasons={filters.lostReasons}
+          salesUsers={filters.salesUsers}
+          onApply={(params) => {
+            setLocation(`/pipeline${params ? `?${params}` : ""}`);
+            setFiltersOpen(false);
+          }}
+        />
+      </OverlayModal>
 
       <div className="grid auto-cols-[minmax(320px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
         {boardColumns.map((column) => (
@@ -370,79 +381,72 @@ function PipelineFilters({
     follow_up: current.follow_up ?? "",
   });
 
-  return (
-    <form
-      className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-12"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(buildQuery(form));
-      }}
-    >
-      <Input
-        className="xl:col-span-3"
-        value={form.q}
-        onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))}
-        placeholder="Cari cepat nama / perusahaan / kode"
-      />
-      <NativeSelect
-        className="xl:col-span-2"
-        value={form.account_category}
-        onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))}
-        placeholder="Semua kategori"
-        options={accountCategories}
-      />
-      <NativeSelect
-        className="xl:col-span-2"
-        value={form.owner_id}
-        onChange={(value) => setForm((prev) => ({ ...prev, owner_id: value }))}
-        placeholder="Semua owner"
-        options={salesUsers}
-      />
-      <NativeSelect
-        className="xl:col-span-2"
-        value={form.gpt_mode}
-        onChange={(value) => setForm((prev) => ({ ...prev, gpt_mode: value }))}
-        placeholder="Semua mode GPT"
-        options={gptModes}
-      />
-      <NativeSelect
-        className="xl:col-span-2"
-        value={form.user_temperature}
-        onChange={(value) => setForm((prev) => ({ ...prev, user_temperature: value }))}
-        placeholder="Semua suhu user"
-        options={userTemperatures}
-      />
-      <NativeSelect
-        className="xl:col-span-1"
-        value={form.dominant_emotion}
-        onChange={(value) => setForm((prev) => ({ ...prev, dominant_emotion: value }))}
-        placeholder="Semua emosi"
-        options={dominantEmotions}
-      />
-      <NativeSelect
-        className="xl:col-span-2"
-        value={form.bridge_status}
-        onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))}
-        placeholder="Semua bridge status"
-        options={bridgeStatuses}
-      />
-      <NativeSelect
-        className="xl:col-span-2"
-        value={form.follow_up}
-        onChange={(value) => setForm((prev) => ({ ...prev, follow_up: value }))}
-        placeholder="Semua follow up"
-        options={[
-          { value: "overdue", label: "Terlambat" },
-          { value: "today", label: "Hari Ini" },
-          { value: "week", label: "7 Hari" },
-        ]}
-      />
-      <div className="grid gap-3 md:grid-cols-2 xl:col-span-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <NativeSelect
-          className="w-full"
-          value={form.bridge_candidate}
-          onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
-          placeholder="Semua bridge candidate"
+	  return (
+	    <form
+	      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+	      onSubmit={(event) => {
+	        event.preventDefault();
+	        onApply(buildQuery(form));
+	      }}
+	    >
+	      <Input
+	        className="sm:col-span-2 lg:col-span-3"
+	        value={form.q}
+	        onChange={(event) => setForm((prev) => ({ ...prev, q: event.target.value }))}
+	        placeholder="Cari cepat nama / perusahaan / kode"
+	      />
+	      <NativeSelect
+	        value={form.account_category}
+	        onChange={(value) => setForm((prev) => ({ ...prev, account_category: value }))}
+	        placeholder="Semua kategori"
+	        options={accountCategories}
+	      />
+	      <NativeSelect
+	        value={form.owner_id}
+	        onChange={(value) => setForm((prev) => ({ ...prev, owner_id: value }))}
+	        placeholder="Semua owner"
+	        options={salesUsers}
+	      />
+	      <NativeSelect
+	        value={form.gpt_mode}
+	        onChange={(value) => setForm((prev) => ({ ...prev, gpt_mode: value }))}
+	        placeholder="Semua mode GPT"
+	        options={gptModes}
+	      />
+	      <NativeSelect
+	        value={form.user_temperature}
+	        onChange={(value) => setForm((prev) => ({ ...prev, user_temperature: value }))}
+	        placeholder="Semua suhu user"
+	        options={userTemperatures}
+	      />
+	      <NativeSelect
+	        value={form.dominant_emotion}
+	        onChange={(value) => setForm((prev) => ({ ...prev, dominant_emotion: value }))}
+	        placeholder="Semua emosi"
+	        options={dominantEmotions}
+	      />
+	      <NativeSelect
+	        value={form.bridge_status}
+	        onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))}
+	        placeholder="Semua bridge status"
+	        options={bridgeStatuses}
+	      />
+	      <NativeSelect
+	        value={form.follow_up}
+	        onChange={(value) => setForm((prev) => ({ ...prev, follow_up: value }))}
+	        placeholder="Semua follow up"
+	        options={[
+	          { value: "overdue", label: "Terlambat" },
+	          { value: "today", label: "Hari Ini" },
+	          { value: "week", label: "7 Hari" },
+	        ]}
+	      />
+	      <div className="grid gap-3 sm:col-span-2 lg:col-span-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+	        <NativeSelect
+	          className="w-full"
+	          value={form.bridge_candidate}
+	          onChange={(value) => setForm((prev) => ({ ...prev, bridge_candidate: value }))}
+	          placeholder="Semua bridge candidate"
           options={[
             { value: "true", label: "Bridge Candidate" },
             { value: "false", label: "Bukan Bridge Candidate" },
@@ -455,10 +459,10 @@ function PipelineFilters({
           placeholder="Semua lost reason"
           options={lostReasons}
         />
-        <Button type="submit" variant="secondary" className="w-full md:w-auto">
-          Filter Board
-        </Button>
-      </div>
-    </form>
-  );
-}
+	        <Button type="submit" variant="secondary" className="w-full md:w-auto">
+	          Filter Board
+	        </Button>
+	      </div>
+	    </form>
+	  );
+	}

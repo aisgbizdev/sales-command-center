@@ -11,9 +11,189 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ReactApiController extends Controller
 {
+    public function prospectForm(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->canCreateProspect(), 403);
+
+        return response()->json([
+            'sources' => collect(Prospect::SOURCES)->map(fn (string $source) => [
+                'value' => $source,
+                'label' => strtoupper($source),
+            ])->values(),
+            'statuses' => collect(Prospect::STATUSES)->map(fn (string $status) => [
+                'value' => $status,
+                'label' => Prospect::STATUS_LABELS[$status] ?? strtoupper($status),
+            ])->values(),
+            'types' => collect(ProspectLog::TYPES)->map(fn (string $type) => [
+                'value' => $type,
+                'label' => strtoupper($type),
+            ])->values(),
+            'canAssignOwner' => !$user->isPenjualan(),
+            ...$this->filterOptions($user),
+        ]);
+    }
+
+    public function prospectDetail(Request $request, Prospect $prospect): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+
+        $prospect->load([
+            'owner:id,name',
+            'logs' => fn ($q) => $q->with('user:id,name')->latest('log_date'),
+        ]);
+
+        return response()->json([
+            'prospect' => [
+                'id' => $prospect->id,
+                'prospectCode' => $prospect->prospect_code,
+                'name' => $prospect->name,
+                'company' => $prospect->company ?: 'Belum ada nama perusahaan',
+                'phone' => $prospect->phone,
+                'email' => $prospect->email,
+                'source' => $prospect->source,
+                'owner' => $prospect->owner?->name ?? '-',
+                'ownerId' => $prospect->owner_id ? (string) $prospect->owner_id : '',
+                'accountCategory' => $prospect->account_category,
+                'accountCategoryLabel' => Prospect::ACCOUNT_CATEGORY_LABELS[$prospect->account_category] ?? strtoupper($prospect->account_category),
+                'status' => $prospect->status,
+                'statusLabel' => Prospect::STATUS_LABELS[$prospect->status] ?? strtoupper($prospect->status),
+                'gptMode' => $prospect->gpt_mode,
+                'userTemperature' => $prospect->user_temperature,
+                'dominantEmotion' => $prospect->dominant_emotion,
+                'bridgeCandidate' => (bool) $prospect->bridge_candidate,
+                'bridgeStatus' => $prospect->bridge_status,
+                'lostReason' => $prospect->lost_reason,
+                'mainObjection' => $prospect->main_objection,
+                'priority' => (int) $prospect->priority,
+                'nextFollowUpDate' => $prospect->next_follow_up_date?->format('Y-m-d'),
+                'nextFollowUpDateLabel' => $prospect->next_follow_up_date?->format('d M Y') ?: '-',
+                'estimationValue' => (float) ($prospect->estimation_value ?? 0),
+                'estimationValueLabel' => 'Rp ' . number_format((float) ($prospect->estimation_value ?? 0), 0, ',', '.'),
+                'notes' => $prospect->notes,
+            ],
+            'logs' => $prospect->logs->map(fn (ProspectLog $log) => [
+                'id' => $log->id,
+                'dateLabel' => $log->log_date?->format('d M Y') ?: '-',
+                'activityType' => $log->activity_type,
+                'activityTypeLabel' => strtoupper($log->activity_type),
+                'summary' => $log->summary,
+                'result' => $log->result ?: '-',
+                'user' => $log->user?->name ?? '-',
+            ])->values(),
+            'canEdit' => $user->canEditProspect($prospect),
+            'editUrl' => route('prospects.edit', $prospect),
+            'updateUrl' => route('prospects.update', $prospect),
+            'storeLogUrl' => route('react-api.prospects.logs.store', $prospect),
+            'types' => collect(ProspectLog::TYPES)->map(fn (string $type) => [
+                'value' => $type,
+                'label' => strtoupper($type),
+            ])->values(),
+        ]);
+    }
+
+    public function storeProspectLog(Request $request, Prospect $prospect): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+        abort_unless($user->canEditProspect($prospect), 403);
+
+        $validated = $request->validate([
+            'daily_activity_type' => ['required', Rule::in(ProspectLog::TYPES)],
+            'daily_summary' => ['required', 'string', 'max:255'],
+            'daily_result' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        ProspectLog::query()->create([
+            'prospect_id' => $prospect->id,
+            'user_id' => $user->id,
+            'log_date' => now()->toDateString(),
+            'activity_type' => $validated['daily_activity_type'],
+            'summary' => $validated['daily_summary'],
+            'result' => $validated['daily_result'] ?? null,
+        ]);
+
+        return response()->json(['message' => 'Input harian tersimpan.']);
+    }
+
+    public function chatReviewForm(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->canCreateChatReview(), 403);
+
+        $prospects = $this->scopedProspects($user)
+            ->orderByDesc('updated_at')
+            ->limit(200)
+            ->get(['id', 'prospect_code', 'name']);
+
+        return response()->json([
+            'channels' => collect(ChatReview::CHANNELS)->map(fn (string $channel) => [
+                'value' => $channel,
+                'label' => strtoupper($channel),
+            ])->values(),
+            'outcomes' => collect(ChatReview::OUTCOMES)->map(fn (string $outcome) => [
+                'value' => $outcome,
+                'label' => strtoupper($outcome),
+            ])->values(),
+            'statuses' => collect(ChatReview::STATUSES)->map(fn (string $status) => [
+                'value' => $status,
+                'label' => strtoupper($status),
+            ])->values(),
+            'prospects' => $prospects->map(fn (Prospect $prospect) => [
+                'value' => (string) $prospect->id,
+                'label' => $prospect->prospect_code . ' - ' . $prospect->name,
+            ])->values(),
+        ]);
+    }
+
+    public function chatReviewDetail(Request $request, ChatReview $chatReview): JsonResponse
+    {
+        abort_unless($request->user()->can('access-chat-reviews'), 403);
+        $user = $request->user();
+
+        abort_unless($this->scopedChatReviews($user)->whereKey($chatReview->id)->exists(), 404);
+
+        $chatReview->load([
+            'submitter:id,name,role',
+            'prospect:id,prospect_code,name,account_category',
+        ]);
+
+        return response()->json([
+            'review' => [
+                'id' => $chatReview->id,
+                'title' => $chatReview->title,
+                'channel' => $chatReview->channel,
+                'outcome' => $chatReview->outcome,
+                'status' => $chatReview->status,
+                'customerName' => $chatReview->customer_name,
+                'customerCompany' => $chatReview->customer_company,
+                'prospectId' => $chatReview->prospect_id ? (string) $chatReview->prospect_id : '',
+                'chatSummary' => $chatReview->chat_summary,
+                'chatExcerpt' => $chatReview->chat_excerpt,
+                'whatWorked' => $chatReview->what_worked,
+                'whatFailed' => $chatReview->what_failed,
+                'suggestedKnowledgeUpdate' => $chatReview->suggested_knowledge_update,
+                'submitter' => $chatReview->submitter?->name ?? '-',
+                'submitterRole' => $chatReview->submitter?->roleLabel() ?? '-',
+                'prospectCode' => $chatReview->prospect?->prospect_code ?? '-',
+                'prospectName' => $chatReview->prospect?->name ?? '-',
+                'accountCategoryLabel' => Prospect::ACCOUNT_CATEGORY_LABELS[$chatReview->prospect?->account_category] ?? '-',
+            ],
+            'canEdit' => $user->canEditChatReview($chatReview),
+            'editUrl' => route('chat-reviews.edit', $chatReview),
+            'updateUrl' => route('chat-reviews.update', $chatReview),
+        ]);
+    }
+
     public function dashboard(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Prospect::class);

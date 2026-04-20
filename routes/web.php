@@ -31,9 +31,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', ReactAppController::class)->name('dashboard');
     Route::get('/prospects', ReactAppController::class)->name('prospects.index');
+    Route::get('/prospects/create', ReactAppController::class)->name('prospects.create');
+    Route::get('/prospects/{prospect}', ReactAppController::class)->name('prospects.show');
+    Route::get('/prospects/{prospect}/edit', ReactAppController::class)->name('prospects.edit');
     Route::get('/pipeline', ReactAppController::class)->name('prospects.pipeline');
     Route::get('/kinerja-penjualan', ReactAppController::class)->name('prospects.performance');
     Route::get('/chat-reviews', ReactAppController::class)->name('chat-reviews.index');
+    Route::get('/chat-reviews/create', ReactAppController::class)->name('chat-reviews.create');
+    Route::get('/chat-reviews/{chatReview}', ReactAppController::class)->name('chat-reviews.show');
+    Route::get('/chat-reviews/{chatReview}/edit', ReactAppController::class)->name('chat-reviews.edit');
     Route::get('/knowledge-queue', ReactAppController::class)->name('knowledge-queue.index');
     Route::get('/react/{path?}', function () {
         return redirect()->route('dashboard');
@@ -43,9 +49,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/meta', [ReactApiController::class, 'meta'])->name('react-api.meta');
         Route::get('/dashboard', [ReactApiController::class, 'dashboard'])->name('react-api.dashboard');
         Route::get('/prospects', [ReactApiController::class, 'prospects'])->name('react-api.prospects');
+        Route::get('/prospects/form', [ReactApiController::class, 'prospectForm'])->name('react-api.prospects.form');
+        Route::get('/prospects/{prospect}', [ReactApiController::class, 'prospectDetail'])->name('react-api.prospects.show');
+        Route::post('/prospects/{prospect}/logs', [ReactApiController::class, 'storeProspectLog'])->name('react-api.prospects.logs.store');
         Route::get('/pipeline', [ReactApiController::class, 'pipeline'])->name('react-api.pipeline');
         Route::get('/performance', [ReactApiController::class, 'performance'])->name('react-api.performance');
         Route::get('/chat-reviews', [ReactApiController::class, 'chatReviews'])->name('react-api.chat-reviews');
+        Route::get('/chat-reviews/form', [ReactApiController::class, 'chatReviewForm'])->name('react-api.chat-reviews.form');
+        Route::get('/chat-reviews/{chatReview}', [ReactApiController::class, 'chatReviewDetail'])->name('react-api.chat-reviews.show');
         Route::get('/knowledge-queue', [ReactApiController::class, 'knowledgeQueue'])->name('react-api.knowledge-queue');
     });
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -57,9 +68,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/knowledge-queue/{knowledgeQueue}/reject', [KnowledgeUpdateQueueController::class, 'reject'])->name('knowledge-queue.reject');
 
     Route::resource('prospects', ProspectController::class)
-        ->except(['index'])
+        ->except(['index', 'create', 'show', 'edit'])
         ->parameters(['prospects' => 'prospect']);
     Route::resource('chat-reviews', ChatReviewController::class)
-        ->except(['index'])
+        ->except(['index', 'create', 'show', 'edit'])
         ->parameters(['chat-reviews' => 'chatReview']);
 });
