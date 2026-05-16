@@ -2,6 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { KanbanSquare, Plus } from "lucide-react";
 import { useLocation } from "wouter";
+import { useSearch } from "wouter/use-browser-location";
 
 import { boot, fetchJson } from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/utils";
@@ -10,12 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Option } from "@/types";
-import { DataTable, ErrorState, buildQuery, getQueryString, LoadingState, MetricCard, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, MetricCard, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
 
 export function DashboardPage() {
-  const [location, setLocation] = useLocation();
-  const queryString = getQueryString(location);
+  const [, setLocation] = useLocation();
+  const queryString = useSearch() ?? "";
   const search = React.useMemo(() => new URLSearchParams(queryString), [queryString]);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const dashboard = useQuery({
     queryKey: ["dashboard", queryString],
@@ -55,7 +57,9 @@ export function DashboardPage() {
           <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Filter AI Sales</p>
             <div className="mt-4">
-              <DashboardFilters current={filters.current} filters={filters} onApply={(params) => setLocation(`/dashboard${params ? `?${params}` : ""}`)} />
+              <Button type="button" variant="secondary" className="w-full" onClick={() => setFiltersOpen(true)}>
+                Buka Filter
+              </Button>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <MiniMetric label="Overdue" value={kpis.overdueCount} variant="danger" />
@@ -64,6 +68,17 @@ export function DashboardPage() {
           </div>
         </CardHeader>
       </Card>
+
+      <OverlayModal open={filtersOpen} title="Filter AI Sales" onClose={() => setFiltersOpen(false)}>
+        <DashboardFilters
+          current={filters.current}
+          filters={filters}
+          onApply={(params) => {
+            setLocation(`/dashboard${params ? `?${params}` : ""}`);
+            setFiltersOpen(false);
+          }}
+        />
+      </OverlayModal>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Total Prospek" value={kpis.totalProspects} note="Semua prospek yang masuk scope akses user." />
@@ -234,11 +249,11 @@ function DashboardFilters({
         ]}
       />
       <NativeSelect value={form.bridge_status} onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))} placeholder="Semua bridge status" options={filters.bridgeStatuses} />
-      <div className="md:col-span-2 flex gap-3">
+      <div className="md:col-span-2 flex flex-wrap gap-3">
         <div className="flex-1">
           <NativeSelect value={form.lost_reason} onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))} placeholder="Semua lost reason" options={filters.lostReasons} />
         </div>
-        <Button type="submit" variant="secondary">Terapkan</Button>
+        <Button type="submit" variant="secondary" className="w-full md:w-auto">Terapkan</Button>
       </div>
     </form>
   );

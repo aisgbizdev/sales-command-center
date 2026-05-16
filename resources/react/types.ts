@@ -245,3 +245,95 @@ export type KnowledgeQueueResponse = {
     accountCategories: Option[];
   };
 };
+
+export type ProspectDetailResponse = {
+  prospect: {
+    id: number;
+    prospectCode: string;
+    name: string;
+    company: string;
+    phone: string | null;
+    email: string | null;
+    source: string | null;
+    owner: string;
+    ownerId: string;
+    accountCategory: string;
+    accountCategoryLabel: string;
+    status: string;
+    statusLabel: string;
+    gptMode: string | null;
+    userTemperature: string | null;
+    dominantEmotion: string | null;
+    bridgeCandidate: boolean;
+    bridgeStatus: string | null;
+    lostReason: string | null;
+    mainObjection: string | null;
+    priority: number;
+    nextFollowUpDate: string | null;
+    nextFollowUpDateLabel: string;
+    estimationValue: number;
+    estimationValueLabel: string;
+    notes: string | null;
+  };
+  logs: {
+    id: number;
+    dateLabel: string;
+    activityType: string;
+    activityTypeLabel: string;
+    summary: string;
+    result: string;
+    user: string;
+  }[];
+  canEdit: boolean;
+  editUrl: string;
+  updateUrl: string;
+  storeLogUrl: string;
+  types: Option[];
+};
+
+export type ProspectFormResponse = {
+  sources: Option[];
+  statuses: Option[];
+  types: Option[];
+  canAssignOwner: boolean;
+  accountCategories: Option[];
+  gptModes: Option[];
+  userTemperatures: Option[];
+  dominantEmotions: Option[];
+  bridgeStatuses: Option[];
+  lostReasons: Option[];
+  salesUsers: Option[];
+};
+
+export type ChatReviewDetailResponse = {
+  review: {
+    id: number;
+    title: string;
+    channel: string;
+    outcome: string;
+    status: string;
+    customerName: string;
+    customerCompany: string | null;
+    prospectId: string;
+    chatSummary: string;
+    chatExcerpt: string | null;
+    whatWorked: string | null;
+    whatFailed: string | null;
+    suggestedKnowledgeUpdate: string | null;
+    submitter: string;
+    submitterRole: string;
+    prospectCode: string;
+    prospectName: string;
+    accountCategoryLabel: string;
+  };
+  canEdit: boolean;
+  editUrl: string;
+  updateUrl: string;
+};
+
+export type ChatReviewFormResponse = {
+  channels: Option[];
+  outcomes: Option[];
+  statuses: Option[];
+  prospects: Option[];
+};

@@ -2,6 +2,7 @@ import * as React from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
 import type { Option } from "@/types";
@@ -15,7 +16,8 @@ export function statusVariant(status: string): "default" | "info" | "success" | 
 }
 
 export function getQueryString(location: string) {
-  const url = new URL(location, window.location.origin);
+  if (typeof window === "undefined") return "";
+  const url = toUrl(location);
   return url.search;
 }
 
@@ -28,9 +30,15 @@ export function buildQuery(values: Record<string, string>) {
 }
 
 export function movePage(location: string, setLocation: (path: string) => void, page: number) {
-  const url = new URL(location, window.location.origin);
+  const url = toUrl(location);
   url.searchParams.set("page", String(page));
   setLocation(`${url.pathname}${url.search}`);
+}
+
+function toUrl(location: string) {
+  const base = window.location.origin;
+  if (location.includes("?")) return new URL(location, base);
+  return new URL(`${location}${window.location.search}`, base);
 }
 
 export function MetricCard({ label, value, note }: { label: string; value: number; note: string }) {
@@ -159,5 +167,64 @@ export function NativeSelect({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+export function OverlayModal({
+  open,
+  title,
+  subtitle = "Filter",
+  onClose,
+  children,
+  maxWidthClass = "max-w-[560px]",
+}: {
+  open: boolean;
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  maxWidthClass?: string;
+}) {
+  React.useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.documentElement.style.overflow = previousOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 flex items-end justify-center p-4 sm:items-center">
+        <div
+          className={`w-full ${maxWidthClass} rounded-[28px] border border-white/10 bg-[rgba(11,14,19,0.96)] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{subtitle}</p>
+              <p className="truncate text-lg font-semibold text-white">{title}</p>
+            </div>
+            <Button type="button" variant="secondary" size="sm" className="ml-auto" onClick={onClose}>
+              Tutup
+            </Button>
+          </div>
+          <div className="mt-4 max-h-[calc(100vh-10rem)] overflow-y-auto pr-1">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
