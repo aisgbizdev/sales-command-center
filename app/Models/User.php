@@ -149,7 +149,17 @@ class User extends Authenticatable
 
     public function roleLabel(): string
     {
-        return self::ROLE_LABELS[$this->role] ?? ucfirst(str_replace('_', ' ', $this->role));
+        static $labels = null;
+
+        if ($labels === null) {
+            try {
+                $labels = Role::query()->pluck('label', 'code')->all();
+            } catch (\Throwable) {
+                $labels = [];
+            }
+        }
+
+        return $labels[$this->role] ?? self::ROLE_LABELS[$this->role] ?? ucfirst(str_replace('_', ' ', $this->role));
     }
 
     public function canCreateProspect(): bool

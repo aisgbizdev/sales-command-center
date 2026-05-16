@@ -23,6 +23,10 @@ class ReactAppController extends Controller
             abort_unless($user->can('access-knowledge-queue'), 403);
         }
 
+        if (str_starts_with($path, 'users')) {
+            abort_unless($user->can('manage-users'), 403);
+        }
+
         return view('react.app', [
             'boot' => [
                 'user' => [

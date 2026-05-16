@@ -55,7 +55,7 @@ export function DashboardPage() {
           </div>
 
           <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Filter AI Sales</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#d9c995]/70">Filter AI Sales</p>
             <div className="mt-4">
               <Button type="button" variant="secondary" className="w-full" onClick={() => setFiltersOpen(true)}>
                 Buka Filter
@@ -112,7 +112,7 @@ export function DashboardPage() {
                       className="w-full max-w-7 rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#8ca0bb_100%)] shadow-[0_10px_24px_rgba(255,255,255,0.08)]"
                       style={{ height }}
                     />
-                    <span className="text-center text-[11px] text-slate-500">{item.label}</span>
+                    <span className="text-center text-[11px] text-[#d9c995]/70">{item.label}</span>
                   </div>
                 );
               })}
@@ -152,7 +152,7 @@ export function DashboardPage() {
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {statusSummary.map((item) => (
             <div key={item.key} className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">{item.label}</p>
               <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{formatNumber(item.total)}</p>
             </div>
           ))}
@@ -189,7 +189,7 @@ export function DashboardPage() {
               <Badge key={`${item.id}-status`} variant={statusVariant(item.status)}>
                 {item.statusLabel}
               </Badge>,
-              <a key={`${item.id}-detail`} href={item.detailUrl} className="text-sm text-slate-200 underline-offset-4 hover:underline">
+              <a key={`${item.id}-detail`} href={item.detailUrl} className="text-sm text-[#d9c995] underline-offset-4 hover:underline">
                 Lihat detail
               </a>,
             ])}

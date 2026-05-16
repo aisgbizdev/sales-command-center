@@ -7,14 +7,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }}</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('brand/logo-mark.svg') }}">
+    <link rel="icon" type="image/png" href="{{ asset('brand/Logo SG-WEB111.png') }}">
 
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 </head>
 
-<body class="h-full font-outfit text-white" x-data="{
+<body class="h-full font-outfit text-[#fff2a2]" x-data="{
     sidebarOpen: false,
     sidebarExpand: true,
     init() {
@@ -35,19 +35,19 @@
             <div class="rounded-[24px] border border-white/10 bg-white/5 p-4"
                 :class="sidebarExpand ? '' : 'xl:flex xl:justify-center xl:p-3'">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-                    <img x-cloak x-show="!sidebarExpand" src="{{ asset('brand/logo-mark.svg') }}" alt="Logo"
+                    <img x-cloak x-show="!sidebarExpand" src="{{ asset('brand/Logo SG-WEB111.png') }}" alt="Logo"
                         class="h-9 w-9 rounded-2xl">
-                    <img x-cloak x-show="sidebarExpand" src="{{ asset('brand/logo-word.svg') }}"
+                    <img x-cloak x-show="sidebarExpand" src="{{ asset('brand/Logo SG-WEB111.png') }}"
                         alt="{{ config('app.name') }}" class="h-9 w-auto">
                 </a>
                 <div x-show="sidebarExpand" class="mt-4">
-                    <p class="text-xl font-semibold tracking-tight text-white">{{ auth()->user()->name }}</p>
-                    <p class="mt-1 text-sm text-slate-400">{{ auth()->user()->roleLabel() }}</p>
+                    <p class="text-xl font-semibold tracking-tight text-[#fff2a2]">{{ auth()->user()->name }}</p>
+                    <p class="mt-1 text-sm text-[#d9c995]">{{ auth()->user()->roleLabel() }}</p>
                 </div>
             </div>
 
             <nav class="mt-6 flex-1 space-y-2 overflow-y-auto pr-1">
-                <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#d9c995]/70"
                     x-show="sidebarExpand">Menu</p>
 
                 <a href="{{ route('dashboard') }}"
@@ -125,8 +125,8 @@
                 @endcan
             </nav>
             <div x-show="sidebarExpand" class="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4">
-                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Frontend Stack</p>
-                <p class="mt-2 text-sm leading-6 text-slate-300">
+                <p class="text-xs uppercase tracking-[0.24em] text-[#d9c995]/70">Frontend Stack</p>
+                <p class="mt-2 text-sm leading-6 text-[#d9c995]">
                     React, TypeScript, Wouter, TanStack Query, dan komponen shadcn-style di atas backend Laravel yang
                     sama.
                 </p>
@@ -138,7 +138,7 @@
                 class="sticky top-4 z-30 rounded-[28px] border border-white/10 bg-[rgba(10,13,18,0.72)] px-5 py-4 backdrop-blur-xl">
                 <div class="flex flex-wrap items-center gap-3">
                     <button type="button"
-                        class="mobile-only-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200"
+                        class="mobile-only-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#d9c995]"
                         @click="sidebarOpen = !sidebarOpen">
                         <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none">
                             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2"
@@ -147,7 +147,7 @@
                     </button>
 
                     <button type="button"
-                        class="desktop-only-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200"
+                        class="desktop-only-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#d9c995]"
                         @click="sidebarExpand = !sidebarExpand">
                         <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none">
                             <path d="M4 7h16M4 12h10M4 17h16" stroke="currentColor" stroke-width="2"
@@ -156,21 +156,21 @@
                     </button>
 
                     <div class="hidden items-center gap-3 md:flex">
-                        <img src="{{ asset('brand/logo-mark.svg') }}" alt="SGB" class="h-9 w-9 rounded-2xl" />
-                        <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Sales Command Center</p>
+                        <img src="{{ asset('brand/Logo SG-WEB111.png') }}" alt="SGB" class="h-9 w-9 rounded-2xl" />
+                        <p class="text-xs uppercase tracking-[0.24em] text-[#d9c995]/70">Sales Command Center</p>
                     </div>
 
                     {{-- <div class="desktop-only-block relative min-w-[260px] flex-1">
-                        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#d9c995]/70">
                             <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none">
                                 <path d="m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" />
                             </svg>
                         </span>
                         <input type="text" placeholder="Search or type command..."
-                            class="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-12 pr-24 text-sm text-white placeholder:text-slate-500 focus:border-white/20 focus:outline-none focus:ring-4 focus:ring-white/5" />
+                            class="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-12 pr-24 text-sm text-[#fff2a2] placeholder:text-[#d9c995]/60 focus:border-white/20 focus:outline-none focus:ring-4 focus:ring-white/5" />
                         <kbd
-                            class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-xs text-slate-400">Ctrl
+                            class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-xs text-[#d9c995]">Ctrl
                             K</kbd>
                     </div> --}}
 
@@ -183,13 +183,13 @@
                                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                             </span>
                             <span
-                                class="desktop-only-inline pr-1 text-sm font-medium text-slate-100">{{ auth()->user()->name }}</span>
+                                class="desktop-only-inline pr-1 text-sm font-medium text-[#fff2a2]">{{ auth()->user()->name }}</span>
                         </div>
 
                         <form method="post" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit"
-                                class="inline-flex h-10 items-center rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-100 hover:bg-white/10">
+                                class="inline-flex h-10 items-center rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-[#fff2a2] hover:bg-white/10">
                                 <span class="hidden sm:inline">Logout</span>
                                 <span class="sm:hidden">
                                     <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none">

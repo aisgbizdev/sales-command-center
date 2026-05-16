@@ -731,6 +731,7 @@ class ReactApiController extends Controller
                 ...($user->can('access-performance') ? [['label' => 'Kinerja', 'href' => '/kinerja-penjualan']] : []),
                 ...($user->can('access-chat-reviews') ? [['label' => 'Tinjauan Obrolan', 'href' => '/chat-reviews']] : []),
                 ...($user->can('access-knowledge-queue') ? [['label' => 'Antrian Pengetahuan', 'href' => '/knowledge-queue']] : []),
+                ...($user->can('manage-users') ? [['label' => 'Manajemen User', 'href' => '/users']] : []),
             ],
             'abilities' => [
                 'accessPerformance' => $user->can('access-performance'),

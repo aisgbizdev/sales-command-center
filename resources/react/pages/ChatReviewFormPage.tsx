@@ -25,13 +25,13 @@ function SelectField({
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-2 text-sm text-slate-200">
+    <label className="grid gap-2 text-sm text-[#d9c995]">
       {label}
       <select
         name={name}
         defaultValue={defaultValue ?? ""}
         required={required}
-        className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+        className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
       >
         <option value="">{placeholder}</option>
         {options.map((item) => (
@@ -104,13 +104,13 @@ function ChatReviewForm({ mode, id }: { mode: "create" | "edit"; id?: string }) 
             <CardDescription>Judul, kanal, outcome, dan relasi prospek.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="grid gap-2 text-sm text-slate-200 sm:col-span-2 lg:col-span-3">
+            <label className="grid gap-2 text-sm text-[#d9c995] sm:col-span-2 lg:col-span-3">
               Judul Kasus
               <input
                 name="title"
                 defaultValue={current?.title ?? ""}
                 required
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
               />
             </label>
             <SelectField name="channel" label="Kanal Obrolan" options={data.channels} defaultValue={current?.channel ?? "whatsapp"} required />
@@ -118,21 +118,21 @@ function ChatReviewForm({ mode, id }: { mode: "create" | "edit"; id?: string }) 
             {mode === "edit" ? (
               <SelectField name="status" label="Status" options={data.statuses} defaultValue={current?.status ?? "draft"} required />
             ) : null}
-            <label className="grid gap-2 text-sm text-slate-200">
+            <label className="grid gap-2 text-sm text-[#d9c995]">
               Nama Customer
               <input
                 name="customer_name"
                 defaultValue={current?.customerName ?? ""}
                 required
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
               />
             </label>
-            <label className="grid gap-2 text-sm text-slate-200">
+            <label className="grid gap-2 text-sm text-[#d9c995]">
               Perusahaan
               <input
                 name="customer_company"
                 defaultValue={current?.customerCompany ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
               />
             </label>
             <SelectField name="prospect_id" label="Prospek Terkait" options={data.prospects} defaultValue={current?.prospectId ?? ""} placeholder="- Tidak terkait -" />
@@ -145,47 +145,47 @@ function ChatReviewForm({ mode, id }: { mode: "create" | "edit"; id?: string }) 
             <CardDescription>Ringkasan chat dan catatan pembelajaran.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
-            <label className="grid gap-2 text-sm text-slate-200">
+            <label className="grid gap-2 text-sm text-[#d9c995]">
               Ringkasan Obrolan
               <textarea
                 name="chat_summary"
                 defaultValue={current?.chatSummary ?? ""}
                 required
-                className="min-h-[120px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="min-h-[120px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
               />
             </label>
-            <label className="grid gap-2 text-sm text-slate-200">
+            <label className="grid gap-2 text-sm text-[#d9c995]">
               Potongan Chat Penting
               <textarea
                 name="chat_excerpt"
                 defaultValue={current?.chatExcerpt ?? ""}
-                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
               />
             </label>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-sm text-slate-200">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
                 Yang Berhasil
                 <textarea
                   name="what_worked"
                   defaultValue={current?.whatWorked ?? ""}
-                  className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                  className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
                 />
               </label>
-              <label className="grid gap-2 text-sm text-slate-200">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
                 Yang Gagal
                 <textarea
                   name="what_failed"
                   defaultValue={current?.whatFailed ?? ""}
-                  className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                  className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
                 />
               </label>
             </div>
-            <label className="grid gap-2 text-sm text-slate-200">
+            <label className="grid gap-2 text-sm text-[#d9c995]">
               Saran Pembaruan Pengetahuan GPT
               <textarea
                 name="suggested_knowledge_update"
                 defaultValue={current?.suggestedKnowledgeUpdate ?? ""}
-                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
               />
             </label>
           </CardContent>

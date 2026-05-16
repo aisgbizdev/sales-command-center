@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('brand/logo-mark.svg') }}">
+    <link rel="icon" type="image/png" href="{{ asset('brand/Logo SG-WEB111.png') }}">
     @viteReactRefresh
     @vite('resources/react/main.tsx')
 </head>

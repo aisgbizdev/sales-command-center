@@ -93,7 +93,7 @@ export function PerformancePage() {
           <CardContent className="grid gap-3 md:grid-cols-2">
             {statusBreakdown.map((item) => (
               <div key={item.key} className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">{item.label}</p>
                 <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{item.total}</p>
               </div>
             ))}
@@ -118,7 +118,7 @@ export function PerformancePage() {
                 <Badge key={`${item.id}-followup`} variant="danger">
                   {item.nextFollowUpDateLabel}
                 </Badge>,
-                <a key={`${item.id}-detail`} href={item.detailUrl} className="text-sm text-slate-200 underline-offset-4 hover:underline">
+                <a key={`${item.id}-detail`} href={item.detailUrl} className="text-sm text-[#d9c995] underline-offset-4 hover:underline">
                   Detail
                 </a>,
               ])}

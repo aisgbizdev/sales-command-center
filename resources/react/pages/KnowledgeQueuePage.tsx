@@ -58,14 +58,14 @@ export function KnowledgeQueuePage() {
       <div className="grid gap-4 xl:grid-cols-2">
         {items.length === 0 ? (
           <Card className="xl:col-span-2">
-            <CardContent className="py-14 text-center text-slate-400">Belum ada item knowledge queue pada filter ini.</CardContent>
+            <CardContent className="py-14 text-center text-[#d9c995]">Belum ada item knowledge queue pada filter ini.</CardContent>
           </Card>
         ) : (
           items.map((item) => <KnowledgeQueueCard key={item.id} item={item} />)
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+      <div className="flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
         <span>
           Halaman {meta.currentPage} dari {meta.lastPage}
         </span>
@@ -177,34 +177,34 @@ function KnowledgeQueueCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4 text-sm text-slate-300 md:grid-cols-2">
+        <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4 text-sm text-[#d9c995] md:grid-cols-2">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Requester</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Requester</p>
             <p className="mt-2">{item.requester}</p>
-            <p className="text-xs text-slate-500">Reviewer: {item.reviewer}</p>
+            <p className="text-xs text-[#d9c995]/70">Reviewer: {item.reviewer}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Chat Review</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Chat Review</p>
             <p className="mt-2">Outcome: {item.chatReviewOutcome}</p>
-            <p className="text-xs text-slate-500">Status chat review: {item.chatReviewStatus}</p>
+            <p className="text-xs text-[#d9c995]/70">Status chat review: {item.chatReviewStatus}</p>
           </div>
         </div>
 
         <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Problem Pattern</p>
-          <p className="mt-3 text-sm leading-7 text-slate-300">{item.problemPattern}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Problem Pattern</p>
+          <p className="mt-3 text-sm leading-7 text-[#d9c995]">{item.problemPattern}</p>
         </div>
 
         <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Recommended Update</p>
-          <p className="mt-3 text-sm leading-7 text-slate-300">{item.recommendedUpdate}</p>
-          {item.expectedImpact ? <p className="mt-3 text-sm text-slate-400">Impact: {item.expectedImpact}</p> : null}
-          <p className="mt-3 text-xs text-slate-500">Reviewed at: {item.reviewedAtLabel}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Recommended Update</p>
+          <p className="mt-3 text-sm leading-7 text-[#d9c995]">{item.recommendedUpdate}</p>
+          {item.expectedImpact ? <p className="mt-3 text-sm text-[#d9c995]">Impact: {item.expectedImpact}</p> : null}
+          <p className="mt-3 text-xs text-[#d9c995]/70">Reviewed at: {item.reviewedAtLabel}</p>
         </div>
 
         {item.canReview ? (
           <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Aksi Super Admin</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Aksi Super Admin</p>
             <Input value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder="Catatan review admin" />
             <div className="flex flex-wrap gap-3">
               <Button variant="secondary" onClick={() => setReviewMutation.mutate()} disabled={setReviewMutation.isPending}>
@@ -222,7 +222,7 @@ function KnowledgeQueueCard({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+          <div className="flex items-center gap-2 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
             <BookOpenCheck className="h-4 w-4" />
             Role ini hanya bisa melihat antrian.
           </div>

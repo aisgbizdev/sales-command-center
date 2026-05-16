@@ -7,6 +7,8 @@ use App\Http\Controllers\KnowledgeUpdateQueueController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\ReactApiController;
 use App\Http\Controllers\ReactAppController;
+use App\Http\Controllers\UserMasterDataController;
+use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat-reviews/{chatReview}', ReactAppController::class)->name('chat-reviews.show');
     Route::get('/chat-reviews/{chatReview}/edit', ReactAppController::class)->name('chat-reviews.edit');
     Route::get('/knowledge-queue', ReactAppController::class)->name('knowledge-queue.index');
+    Route::get('/users', ReactAppController::class)->name('users.index');
     Route::get('/react/{path?}', function () {
         return redirect()->route('dashboard');
     })->where('path', '.*');
@@ -58,6 +61,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/chat-reviews/form', [ReactApiController::class, 'chatReviewForm'])->name('react-api.chat-reviews.form');
         Route::get('/chat-reviews/{chatReview}', [ReactApiController::class, 'chatReviewDetail'])->name('react-api.chat-reviews.show');
         Route::get('/knowledge-queue', [ReactApiController::class, 'knowledgeQueue'])->name('react-api.knowledge-queue');
+        Route::get('/users', [UserManagementController::class, 'index'])->name('react-api.users.index');
+        Route::post('/users', [UserManagementController::class, 'store'])->name('react-api.users.store');
+        Route::patch('/users/{user}', [UserManagementController::class, 'update'])->name('react-api.users.update');
+        Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('react-api.users.destroy');
+        Route::get('/user-master-data', [UserMasterDataController::class, 'index'])->name('react-api.user-master-data.index');
+        Route::post('/user-master-data/roles', [UserMasterDataController::class, 'storeRole'])->name('react-api.user-master-data.roles.store');
+        Route::patch('/user-master-data/roles/{role}', [UserMasterDataController::class, 'updateRole'])->name('react-api.user-master-data.roles.update');
+        Route::delete('/user-master-data/roles/{role}', [UserMasterDataController::class, 'destroyRole'])->name('react-api.user-master-data.roles.destroy');
+        Route::post('/user-master-data/units', [UserMasterDataController::class, 'storeUnit'])->name('react-api.user-master-data.units.store');
+        Route::patch('/user-master-data/units/{unit}', [UserMasterDataController::class, 'updateUnit'])->name('react-api.user-master-data.units.update');
+        Route::delete('/user-master-data/units/{unit}', [UserMasterDataController::class, 'destroyUnit'])->name('react-api.user-master-data.units.destroy');
+        Route::post('/user-master-data/teams', [UserMasterDataController::class, 'storeTeam'])->name('react-api.user-master-data.teams.store');
+        Route::patch('/user-master-data/teams/{team}', [UserMasterDataController::class, 'updateTeam'])->name('react-api.user-master-data.teams.update');
+        Route::delete('/user-master-data/teams/{team}', [UserMasterDataController::class, 'destroyTeam'])->name('react-api.user-master-data.teams.destroy');
     });
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::patch('/prospects/{prospect}/quick-update', [ProspectController::class, 'quickUpdate'])->name('prospects.quick-update');

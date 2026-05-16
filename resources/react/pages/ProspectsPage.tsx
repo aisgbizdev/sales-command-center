@@ -83,15 +83,15 @@ export function ProspectsPage() {
             rows={items.map((item) => [
               item.prospectCode,
               <div key={`${item.id}-name`}>
-                <p className="font-medium text-white">{item.name}</p>
-                <p className="text-xs text-slate-500">{item.company}</p>
-                <p className="text-xs text-slate-500">{item.team} / {item.unit}</p>
+                <p className="font-medium text-[#fff2a2]">{item.name}</p>
+                <p className="text-xs text-[#d9c995]/70">{item.company}</p>
+                <p className="text-xs text-[#d9c995]/70">{item.team} / {item.unit}</p>
               </div>,
               <div key={`${item.id}-category`} className="space-y-2">
                 <Badge variant="info">{item.accountCategoryLabel}</Badge>
-                <div className="text-xs text-slate-500">{item.bridgeStatusLabel}</div>
+                <div className="text-xs text-[#d9c995]/70">{item.bridgeStatusLabel}</div>
               </div>,
-              <div key={`${item.id}-qualification`} className="space-y-2 text-xs text-slate-400">
+              <div key={`${item.id}-qualification`} className="space-y-2 text-xs text-[#d9c995]">
                 <div>GPT: {item.gptModeLabel}</div>
                 <div>Suhu: {item.userTemperatureLabel}</div>
                 <div>Emosi: {item.dominantEmotionLabel}</div>
@@ -130,7 +130,7 @@ export function ProspectsPage() {
             emptyMessage="Belum ada prospek yang cocok dengan filter ini."
           />
 
-          <div className="mt-4 flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+          <div className="mt-4 flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
             <span>
               Halaman {meta.currentPage} dari {meta.lastPage}
             </span>

@@ -12,6 +12,61 @@ export type MetaResponse = {
   };
 };
 
+export type TeamOption = Option & { unitId: string; unitName: string };
+
+export type UsersResponse = {
+  items: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    roleLabel: string;
+    unitId: string;
+    unitName: string;
+    teamId: string;
+    teamName: string;
+    createdAtLabel: string;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+  meta: { currentPage: number; lastPage: number; perPage: number; total: number };
+  filters: {
+    current: Record<string, string>;
+    roles: Option[];
+    units: Option[];
+    teams: TeamOption[];
+  };
+};
+
+export type UserMasterDataResponse = {
+  roles: {
+    id: number;
+    code: string;
+    label: string;
+    description: string | null;
+    sortOrder: number;
+    isSystem: boolean;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+  units: {
+    id: number;
+    name: string;
+    code: string;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+  teams: {
+    id: number;
+    name: string;
+    code: string;
+    unitId: string;
+    unitName: string;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+};
+
 export type DashboardResponse = {
   kpis: {
     totalProspects: number;
