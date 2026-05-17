@@ -60,11 +60,6 @@
                 </label>
                 <button type="submit" class="btn">Masuk ke Dashboard</button>
             </form>
-
-            <div class="soft-panel" style="margin-top:12px;">
-                <strong>Akun demo</strong><br>
-                <span class="helper-text"><code>admin@sgbcc.test</code> / <code>password123</code> (Super Admin)</span>
-            </div>
         </section>
     </main>
     <script>

@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { buildQuery, ErrorState, OverlayModal, LoadingState, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { buildQuery, ErrorState, followUpLabel, followUpVariant, OverlayModal, LoadingState, MiniMetric, NativeSelect, priorityVariant, statusVariant } from "@/components/app/shared";
 
 const quickUpdateSchema = z.object({
   status: z.string().min(1),
@@ -111,8 +111,8 @@ export function PipelinePage() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <MiniMetric label="Overdue" value={metrics.overdueCount} variant="danger" />
-            <MiniMetric label="Due Today" value={metrics.dueTodayCount} variant="warn" />
-            <MiniMetric label="<= 3 Hari" value={metrics.dueSoonCount} />
+            <MiniMetric label="Due Today" value={metrics.dueTodayCount} variant="orange" />
+            <MiniMetric label="Due Soon" value={metrics.dueSoonCount} variant="warn" />
           </div>
         </CardHeader>
         <CardContent>
@@ -270,9 +270,17 @@ function PipelineCard({
       <div className="mt-4 space-y-2 text-sm text-[#d9c995]">
         <p>Owner: {item.owner}</p>
         <p>Akun: {item.accountCategoryLabel}</p>
+        <p>Aging: {item.aging_days} hari di stage</p>
+        <p>Update terakhir: {item.last_activity_diff}</p>
+        {item.follow_up_state === "overdue" ? <p>Overdue {item.overdue_days} hari</p> : null}
         <div className="flex flex-wrap gap-2">
           <Badge variant={statusVariant(item.status)}>{item.statusLabel}</Badge>
-          {item.isOverdue ? <Badge variant="danger">Terlambat</Badge> : null}
+          <Badge variant={followUpVariant(item.follow_up_state)}>
+            {followUpLabel(item.follow_up_state, item.overdue_days)}
+          </Badge>
+          <Badge variant={priorityVariant(item.priority_level)}>{item.priority_level}</Badge>
+          {item.is_stale ? <Badge variant="danger">Stale</Badge> : null}
+          {item.mainObjection ? <Badge variant="warn">{item.mainObjection}</Badge> : null}
           {item.bridgeCandidate ? <Badge variant="warn">Bridge Candidate</Badge> : null}
         </div>
       </div>
@@ -438,6 +446,8 @@ function PipelineFilters({
 	        options={[
 	          { value: "overdue", label: "Terlambat" },
 	          { value: "today", label: "Hari Ini" },
+	          { value: "soon", label: "Due Soon" },
+	          { value: "stale", label: "Stale Leads" },
 	          { value: "week", label: "7 Hari" },
 	        ]}
 	      />

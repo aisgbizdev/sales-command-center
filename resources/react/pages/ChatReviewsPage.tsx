@@ -202,6 +202,8 @@ function ChatReviewCard({
           <div className="flex flex-wrap gap-2">
             <Badge variant="info">{item.accountCategoryLabel}</Badge>
             <Badge variant={item.outcome === "berhasil" ? "success" : item.outcome === "gagal" ? "danger" : "warn"}>{item.outcomeLabel}</Badge>
+            {item.objectionTypeLabel ? <Badge variant="warn">{item.objectionTypeLabel}</Badge> : null}
+            {item.emotionalStateLabel ? <Badge variant="orange">{item.emotionalStateLabel}</Badge> : null}
             <Badge variant="warn">{item.statusLabel}</Badge>
           </div>
         </div>

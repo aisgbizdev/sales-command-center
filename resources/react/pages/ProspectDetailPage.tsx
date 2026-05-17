@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 
 import type { ProspectDetailResponse } from "@/types";
 import { fetchJson, sendJson } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState, LoadingState } from "@/components/app/shared";
@@ -23,12 +24,18 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
   const [dailyActivityType, setDailyActivityType] = React.useState("");
   const [dailySummary, setDailySummary] = React.useState("");
   const [dailyResult, setDailyResult] = React.useState("");
+  const [objectionType, setObjectionType] = React.useState("");
+  const [objectionDetail, setObjectionDetail] = React.useState("");
+  const [emotionalState, setEmotionalState] = React.useState("");
 
   React.useEffect(() => {
     if (!detail.data) return;
     setDailyActivityType("");
     setDailySummary("");
     setDailyResult("");
+    setObjectionType("");
+    setObjectionDetail("");
+    setEmotionalState("");
   }, [detail.data?.prospect.id]);
 
   const logMutation = useMutation({
@@ -38,6 +45,9 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
         daily_activity_type: dailyActivityType,
         daily_summary: dailySummary,
         daily_result: dailyResult || null,
+        objection_type: objectionType || null,
+        objection_detail: objectionDetail || null,
+        emotional_state: emotionalState || null,
       });
     },
     onSuccess: async (data) => {
@@ -45,6 +55,9 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
       setDailyActivityType("");
       setDailySummary("");
       setDailyResult("");
+      setObjectionType("");
+      setObjectionDetail("");
+      setEmotionalState("");
       await queryClient.invalidateQueries({ queryKey: ["prospect", id] });
       await queryClient.invalidateQueries({ queryKey: ["prospects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -161,6 +174,47 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
                 placeholder="Opsional"
               />
             </label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Objection Type
+                <select
+                  value={objectionType}
+                  onChange={(event) => setObjectionType(event.target.value)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                >
+                  <option value="">Tidak ada objection</option>
+                  {detail.data.objectionTypes.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Emotional State
+                <select
+                  value={emotionalState}
+                  onChange={(event) => setEmotionalState(event.target.value)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                >
+                  <option value="">Tidak dicatat</option>
+                  {detail.data.emotionalStates.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="grid gap-2 text-sm text-[#d9c995]">
+              Detail Objection
+              <textarea
+                value={objectionDetail}
+                onChange={(event) => setObjectionDetail(event.target.value)}
+                className="min-h-[82px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                placeholder="Opsional, contoh: user minta bukti profit member lama."
+              />
+            </label>
             <div>
               <Button
                 type="button"
@@ -190,7 +244,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
               <table className="min-w-full border-collapse bg-white/[0.02]">
                 <thead>
                   <tr className="bg-white/[0.03]">
-                    {["Tanggal", "Tipe", "Ringkasan", "Hasil", "User"].map((h) => (
+                    {["Tanggal", "Tipe", "Ringkasan", "Objection", "Hasil", "User"].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-[11px] uppercase tracking-[0.18em] text-[#d9c995]">
                         {h}
                       </th>
@@ -203,6 +257,14 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
                       <td className="px-4 py-4">{log.dateLabel}</td>
                       <td className="px-4 py-4">{log.activityTypeLabel}</td>
                       <td className="px-4 py-4">{log.summary}</td>
+                      <td className="px-4 py-4">
+                        {log.objectionTypeLabel ? (
+                          <div className="space-y-2">
+                            <Badge variant="warn">{log.objectionTypeLabel}</Badge>
+                            {log.emotionalStateLabel ? <p className="text-xs text-[#d9c995]/70">{log.emotionalStateLabel}</p> : null}
+                          </div>
+                        ) : "-"}
+                      </td>
                       <td className="px-4 py-4">{log.result}</td>
                       <td className="px-4 py-4">{log.user}</td>
                     </tr>
@@ -216,4 +278,3 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, movePage, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, followUpLabel, followUpVariant, LoadingState, movePage, NativeSelect, priorityVariant, statusVariant } from "@/components/app/shared";
 
 export function ProspectsPage() {
   const [location, setLocation] = useLocation();
@@ -79,7 +79,7 @@ export function ProspectsPage() {
         </CardHeader>
         <CardContent>
           <DataTable
-            headers={["Kode", "Nama", "Kategori", "AI Qualification", "Owner", "Status", "Follow Up", "Aksi"]}
+            headers={["Kode", "Nama", "Kategori", "AI Qualification", "Owner", "Status", "Priority", "Aging", "Last Activity", "Follow Up", "Aksi"]}
             rows={items.map((item) => [
               item.prospectCode,
               <div key={`${item.id}-name`}>
@@ -96,12 +96,26 @@ export function ProspectsPage() {
                 <div>Suhu: {item.userTemperatureLabel}</div>
                 <div>Emosi: {item.dominantEmotionLabel}</div>
                 <div>Lost: {item.lostReasonLabel}</div>
+                {item.mainObjection ? <Badge variant="warn">{item.mainObjection}</Badge> : null}
                 {item.bridgeCandidate ? <Badge variant="warn">Bridge Candidate</Badge> : null}
               </div>,
               item.owner,
               <Badge key={`${item.id}-status`} variant={statusVariant(item.status)}>
                 {item.statusLabel}
               </Badge>,
+              <div key={`${item.id}-priority`} className="space-y-2">
+                <Badge variant={priorityVariant(item.priority_level)}>{item.priority_level}</Badge>
+                <div>
+                  <Badge variant={followUpVariant(item.follow_up_state)}>
+                    {followUpLabel(item.follow_up_state, item.overdue_days)}
+                  </Badge>
+                </div>
+              </div>,
+              <div key={`${item.id}-aging`} className="space-y-2">
+                <span>{item.aging_days} hari</span>
+                {item.is_stale ? <Badge variant="danger">Stale</Badge> : null}
+              </div>,
+              item.last_activity_diff,
               <div key={`${item.id}-followup`}>
                 {item.nextFollowUpDateLabel}
                 {item.isOverdue ? (
@@ -276,6 +290,8 @@ function ProspectFilters({
 	          options={[
 	            { value: "overdue", label: "Terlambat" },
 	            { value: "today", label: "Hari Ini" },
+	            { value: "soon", label: "Due Soon" },
+	            { value: "stale", label: "Stale Leads" },
 	            { value: "week", label: "7 Hari" },
 	          ]}
 	        />

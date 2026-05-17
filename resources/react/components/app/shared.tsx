@@ -8,11 +8,42 @@ import { formatNumber } from "@/lib/utils";
 import type { Option } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export function statusVariant(status: string): "default" | "info" | "success" | "warn" | "danger" {
+type BadgeVariant = "default" | "info" | "success" | "orange" | "warn" | "danger";
+
+export function statusVariant(status: string): BadgeVariant {
   if (status === "penutupan") return "success";
   if (status === "hilang") return "danger";
   if (status === "tindak_lanjut" || status === "sedang_berjalan") return "warn";
   return "info";
+}
+
+export function followUpVariant(state: string): BadgeVariant {
+  if (state === "overdue") return "danger";
+  if (state === "today") return "orange";
+  if (state === "soon") return "warn";
+  if (state === "healthy") return "success";
+  return "default";
+}
+
+export function followUpLabel(state: string, overdueDays = 0) {
+  if (state === "overdue") return overdueDays > 0 ? `Overdue ${overdueDays} hari` : "Overdue";
+  if (state === "today") return "Due Today";
+  if (state === "soon") return "Due Soon";
+  if (state === "healthy") return "Healthy";
+  return "No Follow Up";
+}
+
+export function priorityVariant(level: string): BadgeVariant {
+  if (level === "critical") return "danger";
+  if (level === "high") return "orange";
+  if (level === "medium") return "warn";
+  return "success";
+}
+
+export function healthVariant(state: string): BadgeVariant {
+  if (state === "critical") return "danger";
+  if (state === "warning") return "warn";
+  return "success";
 }
 
 export function getQueryString(location: string) {
@@ -60,7 +91,7 @@ export function MiniMetric({
 }: {
   label: string;
   value: number;
-  variant?: "info" | "warn" | "danger";
+  variant?: "info" | "orange" | "warn" | "danger";
 }) {
   return (
     <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">

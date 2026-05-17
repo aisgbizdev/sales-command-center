@@ -11,7 +11,7 @@ class ReactAppController extends Controller
         $user = $request->user();
         $path = trim($request->path(), '/');
 
-        if (str_starts_with($path, 'kinerja-penjualan')) {
+        if (str_starts_with($path, 'kinerja-penjualan') || str_starts_with($path, 'manager-insights')) {
             abort_unless($user->can('access-performance'), 403);
         }
 

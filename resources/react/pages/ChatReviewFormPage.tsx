@@ -115,6 +115,8 @@ function ChatReviewForm({ mode, id }: { mode: "create" | "edit"; id?: string }) 
             </label>
             <SelectField name="channel" label="Kanal Obrolan" options={data.channels} defaultValue={current?.channel ?? "whatsapp"} required />
             <SelectField name="outcome" label="Outcome" options={data.outcomes} defaultValue={current?.outcome ?? "netral"} required />
+            <SelectField name="objection_type" label="Objection Type" options={data.objectionTypes} defaultValue={current?.objectionType ?? ""} placeholder="- Tidak ada objection -" />
+            <SelectField name="emotional_state" label="Emotional State" options={data.emotionalStates} defaultValue={current?.emotionalState ?? ""} placeholder="- Tidak dicatat -" />
             {mode === "edit" ? (
               <SelectField name="status" label="Status" options={data.statuses} defaultValue={current?.status ?? "draft"} required />
             ) : null}
@@ -136,6 +138,15 @@ function ChatReviewForm({ mode, id }: { mode: "create" | "edit"; id?: string }) 
               />
             </label>
             <SelectField name="prospect_id" label="Prospek Terkait" options={data.prospects} defaultValue={current?.prospectId ?? ""} placeholder="- Tidak terkait -" />
+            <label className="grid gap-2 text-sm text-[#d9c995] sm:col-span-2 lg:col-span-3">
+              Detail Objection
+              <textarea
+                name="objection_detail"
+                defaultValue={current?.objectionDetail ?? ""}
+                className="min-h-[82px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                placeholder="Opsional, contoh: user belum percaya karena belum lihat bukti hasil."
+              />
+            </label>
           </CardContent>
         </Card>
 
@@ -201,4 +212,3 @@ function ChatReviewForm({ mode, id }: { mode: "create" | "edit"; id?: string }) 
     </div>
   );
 }
-

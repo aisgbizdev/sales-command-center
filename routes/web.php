@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/prospects/{prospect}', ReactAppController::class)->name('prospects.show');
     Route::get('/prospects/{prospect}/edit', ReactAppController::class)->name('prospects.edit');
     Route::get('/pipeline', ReactAppController::class)->name('prospects.pipeline');
+    Route::get('/manager-insights', ReactAppController::class)->name('manager-insights');
     Route::get('/kinerja-penjualan', ReactAppController::class)->name('prospects.performance');
     Route::get('/chat-reviews', ReactAppController::class)->name('chat-reviews.index');
     Route::get('/chat-reviews/create', ReactAppController::class)->name('chat-reviews.create');
@@ -57,6 +58,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/prospects/{prospect}/logs', [ReactApiController::class, 'storeProspectLog'])->name('react-api.prospects.logs.store');
         Route::get('/pipeline', [ReactApiController::class, 'pipeline'])->name('react-api.pipeline');
         Route::get('/performance', [ReactApiController::class, 'performance'])->name('react-api.performance');
+        Route::get('/objection-insights', [ReactApiController::class, 'objectionInsights'])->name('react-api.objection-insights');
+        Route::get('/manager-insights', [ReactApiController::class, 'managerInsights'])->name('react-api.manager-insights');
         Route::get('/chat-reviews', [ReactApiController::class, 'chatReviews'])->name('react-api.chat-reviews');
         Route::get('/chat-reviews/form', [ReactApiController::class, 'chatReviewForm'])->name('react-api.chat-reviews.form');
         Route::get('/chat-reviews/{chatReview}', [ReactApiController::class, 'chatReviewDetail'])->name('react-api.chat-reviews.show');

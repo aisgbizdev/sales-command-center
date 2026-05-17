@@ -585,21 +585,28 @@ tbody tr:hover {
     place-items: center;
     padding: 24px 16px;
     overflow: hidden;
-    background:
-        linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.18) 52%, rgba(0, 0, 0, 0.26) 100%),
-        url('/brand/background.png?v=20260516-login') center center / cover no-repeat,
-        #020202;
+    background: #020202;
 }
 
 .auth::before {
     content: "";
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: 0;
+    pointer-events: none;
+    background: url('/brand/background.png?v=20260517-login') center center / 100% 100% no-repeat;
+}
+
+.auth::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
     pointer-events: none;
     background:
-        radial-gradient(circle at 50% 58%, rgba(255, 216, 72, 0.1), transparent 26%),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.18));
+        radial-gradient(circle at 50% 58%, rgba(255, 216, 72, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0.14) 52%, rgba(0, 0, 0, 0.22) 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.12));
 }
 
 .auth .card {

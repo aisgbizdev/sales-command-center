@@ -7,6 +7,9 @@ use App\Models\KnowledgeUpdateQueue;
 use App\Models\Prospect;
 use App\Models\ProspectLog;
 use App\Models\User;
+use App\Services\ManagerInsightService;
+use App\Services\ObjectionAnalyticsService;
+use App\Services\SalesDisciplineMetricsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +36,8 @@ class ReactApiController extends Controller
                 'value' => $type,
                 'label' => strtoupper($type),
             ])->values(),
+            'objectionTypes' => $this->objectionTypeOptions(),
+            'emotionalStates' => $this->emotionalStateOptions(),
             'canAssignOwner' => !$user->isPenjualan(),
             ...$this->filterOptions($user),
         ]);
@@ -78,6 +83,7 @@ class ReactApiController extends Controller
                 'estimationValue' => (float) ($prospect->estimation_value ?? 0),
                 'estimationValueLabel' => 'Rp ' . number_format((float) ($prospect->estimation_value ?? 0), 0, ',', '.'),
                 'notes' => $prospect->notes,
+                ...$this->prospectOperationalFields($prospect),
             ],
             'logs' => $prospect->logs->map(fn (ProspectLog $log) => [
                 'id' => $log->id,
@@ -86,6 +92,11 @@ class ReactApiController extends Controller
                 'activityTypeLabel' => strtoupper($log->activity_type),
                 'summary' => $log->summary,
                 'result' => $log->result ?: '-',
+                'objectionType' => $log->objection_type,
+                'objectionTypeLabel' => $log->objection_type ? (ProspectLog::OBJECTION_TYPE_LABELS[$log->objection_type] ?? strtoupper($log->objection_type)) : null,
+                'objectionDetail' => $log->objection_detail,
+                'emotionalState' => $log->emotional_state,
+                'emotionalStateLabel' => $log->emotional_state ? (ProspectLog::EMOTIONAL_STATE_LABELS[$log->emotional_state] ?? strtoupper($log->emotional_state)) : null,
                 'user' => $log->user?->name ?? '-',
             ])->values(),
             'canEdit' => $user->canEditProspect($prospect),
@@ -96,6 +107,8 @@ class ReactApiController extends Controller
                 'value' => $type,
                 'label' => strtoupper($type),
             ])->values(),
+            'objectionTypes' => $this->objectionTypeOptions(),
+            'emotionalStates' => $this->emotionalStateOptions(),
         ]);
     }
 
@@ -111,6 +124,9 @@ class ReactApiController extends Controller
             'daily_activity_type' => ['required', Rule::in(ProspectLog::TYPES)],
             'daily_summary' => ['required', 'string', 'max:255'],
             'daily_result' => ['nullable', 'string', 'max:2000'],
+            'objection_type' => ['nullable', Rule::in(ProspectLog::OBJECTION_TYPES)],
+            'objection_detail' => ['nullable', 'string', 'max:2000'],
+            'emotional_state' => ['nullable', Rule::in(ProspectLog::EMOTIONAL_STATES)],
         ]);
 
         ProspectLog::query()->create([
@@ -120,6 +136,9 @@ class ReactApiController extends Controller
             'activity_type' => $validated['daily_activity_type'],
             'summary' => $validated['daily_summary'],
             'result' => $validated['daily_result'] ?? null,
+            'objection_type' => $validated['objection_type'] ?? null,
+            'objection_detail' => $validated['objection_detail'] ?? null,
+            'emotional_state' => $validated['emotional_state'] ?? null,
         ]);
 
         return response()->json(['message' => 'Input harian tersimpan.']);
@@ -148,6 +167,8 @@ class ReactApiController extends Controller
                 'value' => $status,
                 'label' => strtoupper($status),
             ])->values(),
+            'objectionTypes' => $this->objectionTypeOptions(),
+            'emotionalStates' => $this->emotionalStateOptions(),
             'prospects' => $prospects->map(fn (Prospect $prospect) => [
                 'value' => (string) $prospect->id,
                 'label' => $prospect->prospect_code . ' - ' . $prospect->name,
@@ -173,6 +194,9 @@ class ReactApiController extends Controller
                 'title' => $chatReview->title,
                 'channel' => $chatReview->channel,
                 'outcome' => $chatReview->outcome,
+                'objectionType' => $chatReview->objection_type,
+                'objectionDetail' => $chatReview->objection_detail,
+                'emotionalState' => $chatReview->emotional_state,
                 'status' => $chatReview->status,
                 'customerName' => $chatReview->customer_name,
                 'customerCompany' => $chatReview->customer_company,
@@ -194,7 +218,7 @@ class ReactApiController extends Controller
         ]);
     }
 
-    public function dashboard(Request $request): JsonResponse
+    public function dashboard(Request $request, SalesDisciplineMetricsService $disciplineMetrics): JsonResponse
     {
         $this->authorize('viewAny', Prospect::class);
         $user = $request->user();
@@ -220,13 +244,20 @@ class ReactApiController extends Controller
         $regularWonProspects = (clone $prospects)->where('account_category', 'reguler')->where('status', Prospect::STATUS_PENUTUPAN)->count();
         $bridgeCandidatesCount = (clone $prospects)->where('bridge_candidate', true)->count();
         $bridgeMovedCount = (clone $prospects)->where('bridge_status', 'moved')->count();
-        $overdueCount = (clone $prospects)
-            ->where('status', '!=', Prospect::STATUS_HILANG)
-            ->whereDate('next_follow_up_date', '<', now()->toDateString())
-            ->count();
-        $dueTodayCount = (clone $prospects)
-            ->where('status', '!=', Prospect::STATUS_HILANG)
-            ->whereDate('next_follow_up_date', now()->toDateString())
+        $overdueCount = $this->overdueFollowUpQuery(clone $prospects)->count();
+        $dueTodayCount = $this->dueTodayFollowUpQuery(clone $prospects)->count();
+        $staleCount = $this->staleProspectsQuery(clone $prospects)->count();
+        $staleOverdueCount = $this->staleProspectsQuery($this->overdueFollowUpQuery(clone $prospects))->count();
+        $highPriorityCount = $this->highPriorityProspectsQuery(clone $prospects)->count();
+        $agingOverSevenDaysCount = $this->agingOverSevenDaysQuery(clone $prospects)->count();
+        $activeLeadCount = $this->activeFollowUpQuery(clone $prospects)->count();
+        $visibleSalesUsers = $this->visibleSalesUsers($user);
+        $salesDisciplineMetrics = collect($disciplineMetrics->forSales($visibleSalesUsers, clone $prospects));
+        $crmHealthScore = $salesDisciplineMetrics->count() > 0
+            ? round($salesDisciplineMetrics->avg('crm_activity_score'), 1)
+            : 100;
+        $activeSalesTodayCount = $salesDisciplineMetrics
+            ->filter(fn (array $metric) => $metric['daily_activity_count'] > 0)
             ->count();
 
         $todayInputQuery = ProspectLog::query()->whereDate('log_date', now()->toDateString());
@@ -271,6 +302,13 @@ class ReactApiController extends Controller
                 'todayInputCount' => $todayInputQuery->count(),
                 'overdueCount' => $overdueCount,
                 'dueTodayCount' => $dueTodayCount,
+                'staleCount' => $staleCount,
+                'staleOverdueCount' => $staleOverdueCount,
+                'highPriorityCount' => $highPriorityCount,
+                'agingOverSevenDaysCount' => $agingOverSevenDaysCount,
+                'crmHealthScore' => $crmHealthScore,
+                'overdueRatio' => $activeLeadCount > 0 ? round(($overdueCount / $activeLeadCount) * 100, 1) : 0,
+                'activeSalesTodayCount' => $activeSalesTodayCount,
                 'healthPercent' => $totalProspects > 0 ? round(($wonProspects / $totalProspects) * 100, 2) : 0,
             ],
             'statusSummary' => collect(Prospect::STATUSES)->map(fn (string $status) => [
@@ -287,6 +325,7 @@ class ReactApiController extends Controller
                 'nextFollowUpDateLabel' => $prospect->next_follow_up_date?->format('d M Y') ?: '-',
                 'status' => $prospect->status,
                 'statusLabel' => Prospect::STATUS_LABELS[$prospect->status] ?? $prospect->status,
+                ...$this->prospectOperationalFields($prospect),
                 'detailUrl' => route('prospects.show', $prospect),
             ])->values(),
             'lostReasonSummary' => collect($lostReasonSummary)->map(fn ($total, $reason) => [
@@ -294,6 +333,19 @@ class ReactApiController extends Controller
                 'label' => Prospect::LOST_REASON_LABELS[$reason] ?? strtoupper($reason),
                 'total' => (int) $total,
             ])->values(),
+            'disciplineSnapshot' => [
+                'topOverdueSales' => $salesDisciplineMetrics
+                    ->sortByDesc('overdue_lead_count')
+                    ->take(3)
+                    ->values(),
+                'mostDisciplinedSales' => $salesDisciplineMetrics
+                    ->sortByDesc('crm_activity_score')
+                    ->take(3)
+                    ->values(),
+                'salesWithoutActivityToday' => $salesDisciplineMetrics
+                    ->filter(fn (array $metric) => $metric['daily_activity_count'] === 0 && $metric['active_lead_count'] > 0)
+                    ->values(),
+            ],
             'filters' => [
                 'current' => $this->currentFilters($request),
                 ...$this->filterOptions($user),
@@ -324,6 +376,7 @@ class ReactApiController extends Controller
                 'userTemperatureLabel' => Prospect::USER_TEMPERATURE_LABELS[$prospect->user_temperature] ?? '-',
                 'dominantEmotion' => $prospect->dominant_emotion,
                 'dominantEmotionLabel' => Prospect::DOMINANT_EMOTION_LABELS[$prospect->dominant_emotion] ?? '-',
+                'mainObjection' => $prospect->main_objection,
                 'bridgeCandidate' => (bool) $prospect->bridge_candidate,
                 'bridgeStatus' => $prospect->bridge_status,
                 'bridgeStatusLabel' => Prospect::BRIDGE_STATUS_LABELS[$prospect->bridge_status] ?? '-',
@@ -336,7 +389,8 @@ class ReactApiController extends Controller
                 'statusLabel' => Prospect::STATUS_LABELS[$prospect->status] ?? strtoupper($prospect->status),
                 'nextFollowUpDate' => $prospect->next_follow_up_date?->format('Y-m-d'),
                 'nextFollowUpDateLabel' => $prospect->next_follow_up_date?->format('d M Y') ?: '-',
-                'isOverdue' => (bool) ($prospect->next_follow_up_date && $prospect->next_follow_up_date->isPast() && $prospect->status !== Prospect::STATUS_HILANG),
+                'isOverdue' => $prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_OVERDUE,
+                ...$this->prospectOperationalFields($prospect),
                 'showUrl' => route('prospects.show', $prospect),
                 'editUrl' => route('prospects.edit', $prospect),
                 'deleteUrl' => route('prospects.destroy', $prospect),
@@ -409,7 +463,8 @@ class ReactApiController extends Controller
                         'statusLabel' => Prospect::STATUS_LABELS[$prospect->status] ?? strtoupper($prospect->status),
                         'nextFollowUpDate' => $prospect->next_follow_up_date?->format('Y-m-d'),
                         'nextFollowUpDateLabel' => $prospect->next_follow_up_date?->format('d M Y') ?: '-',
-                        'isOverdue' => (bool) ($prospect->next_follow_up_date && $prospect->next_follow_up_date->isPast() && $prospect->status !== Prospect::STATUS_HILANG),
+                        'isOverdue' => $prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_OVERDUE,
+                        ...$this->prospectOperationalFields($prospect),
                         'quickUpdateUrl' => route('prospects.quick-update', $prospect),
                         'detailUrl' => route('prospects.show', $prospect),
                         'canEdit' => $user->canEditProspect($prospect) || ($user->isManager() && $prospect->team_id === $user->team_id) || $user->isSuperAdmin(),
@@ -418,16 +473,13 @@ class ReactApiController extends Controller
             })->values(),
             'metrics' => [
                 'overdueCount' => $prospects
-                    ->where('status', '!=', Prospect::STATUS_HILANG)
-                    ->filter(fn (Prospect $prospect) => $prospect->next_follow_up_date && $prospect->next_follow_up_date->lt($today))
+                    ->filter(fn (Prospect $prospect) => $prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_OVERDUE)
                     ->count(),
                 'dueTodayCount' => $prospects
-                    ->where('status', '!=', Prospect::STATUS_HILANG)
-                    ->filter(fn (Prospect $prospect) => $prospect->next_follow_up_date && $prospect->next_follow_up_date->isSameDay($today))
+                    ->filter(fn (Prospect $prospect) => $prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_TODAY)
                     ->count(),
                 'dueSoonCount' => $prospects
-                    ->where('status', '!=', Prospect::STATUS_HILANG)
-                    ->filter(fn (Prospect $prospect) => $prospect->next_follow_up_date && $prospect->next_follow_up_date->between($today, $dueSoonLimit))
+                    ->filter(fn (Prospect $prospect) => $prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_SOON)
                     ->count(),
             ],
             'filters' => [
@@ -441,7 +493,7 @@ class ReactApiController extends Controller
         ]);
     }
 
-    public function performance(Request $request): JsonResponse
+    public function performance(Request $request, SalesDisciplineMetricsService $disciplineMetrics): JsonResponse
     {
         abort_unless($request->user()->can('access-performance'), 403);
         $user = $request->user();
@@ -474,6 +526,9 @@ class ReactApiController extends Controller
             ->orderByDesc('activity_count')
             ->get();
 
+        $disciplineBySales = $disciplineMetrics->forSales($salesUsers, clone $baseProspects);
+        $disciplineCollection = collect($disciplineBySales)->values();
+
         $scopeProspects = clone $baseProspects;
         $statusBreakdown = (clone $scopeProspects)
             ->whereBetween('created_at', [$from, $to])
@@ -498,8 +553,9 @@ class ReactApiController extends Controller
             ->get();
 
         return response()->json([
-            'rows' => $salesUsers->map(function (User $sales) {
+            'rows' => $salesUsers->map(function (User $sales) use ($disciplineBySales) {
                 $ratio = $sales->total_prospects > 0 ? round(($sales->closing_count / $sales->total_prospects) * 100, 1) : 0;
+                $discipline = $disciplineBySales[$sales->id] ?? null;
 
                 return [
                     'id' => $sales->id,
@@ -515,8 +571,23 @@ class ReactApiController extends Controller
                     'totalValue' => (float) ($sales->total_value ?? 0),
                     'totalValueLabel' => 'Rp '.number_format((float) ($sales->total_value ?? 0), 0, ',', '.'),
                     'ratio' => $ratio,
+                    'discipline' => $discipline,
                 ];
             })->values(),
+            'operationalDiscipline' => $disciplineCollection,
+            'managerInsights' => [
+                'topOverdueSales' => $disciplineCollection
+                    ->sortByDesc('overdue_lead_count')
+                    ->take(3)
+                    ->values(),
+                'mostDisciplinedSales' => $disciplineCollection
+                    ->sortByDesc('crm_activity_score')
+                    ->take(3)
+                    ->values(),
+                'salesWithoutActivityToday' => $disciplineCollection
+                    ->filter(fn (array $metric) => $metric['daily_activity_count'] === 0 && $metric['active_lead_count'] > 0)
+                    ->values(),
+            ],
             'statusBreakdown' => collect(Prospect::STATUSES)->map(fn (string $status) => [
                 'key' => $status,
                 'label' => Prospect::STATUS_LABELS[$status] ?? strtoupper($status),
@@ -530,6 +601,7 @@ class ReactApiController extends Controller
                 'status' => $prospect->status,
                 'statusLabel' => Prospect::STATUS_LABELS[$prospect->status] ?? strtoupper($prospect->status),
                 'nextFollowUpDateLabel' => $prospect->next_follow_up_date?->format('d M Y') ?: '-',
+                ...$this->prospectOperationalFields($prospect),
                 'detailUrl' => route('prospects.show', $prospect),
             ])->values(),
             'objectionFrequency' => $objectionFrequency->map(fn ($item) => [
@@ -545,6 +617,24 @@ class ReactApiController extends Controller
                 ...$this->filterOptions($user),
             ],
         ]);
+    }
+
+    public function objectionInsights(Request $request, ObjectionAnalyticsService $objectionAnalytics): JsonResponse
+    {
+        abort_unless($request->user()->can('access-performance'), 403);
+        $user = $request->user();
+        $prospects = $this->applyProspectFilters($this->scopedProspects($user), $request);
+
+        return response()->json($objectionAnalytics->insights($prospects));
+    }
+
+    public function managerInsights(Request $request, ManagerInsightService $managerInsights): JsonResponse
+    {
+        abort_unless($request->user()->can('access-performance'), 403);
+        $user = $request->user();
+        $prospects = $this->applyProspectFilters($this->scopedProspects($user), $request);
+
+        return response()->json($managerInsights->insights($user, $prospects, $this->visibleSalesUsers($user)));
     }
 
     public function chatReviews(Request $request): JsonResponse
@@ -588,6 +678,10 @@ class ReactApiController extends Controller
                     'statusLabel' => str_replace('_', ' ', ucfirst($review->status)),
                     'summary' => $review->chat_summary,
                     'suggestedKnowledgeUpdate' => $review->suggested_knowledge_update,
+                    'objectionType' => $review->objection_type,
+                    'objectionTypeLabel' => $review->objection_type ? (ProspectLog::OBJECTION_TYPE_LABELS[$review->objection_type] ?? strtoupper($review->objection_type)) : null,
+                    'emotionalState' => $review->emotional_state,
+                    'emotionalStateLabel' => $review->emotional_state ? (ProspectLog::EMOTIONAL_STATE_LABELS[$review->emotional_state] ?? strtoupper($review->emotional_state)) : null,
                     'submitter' => $review->submitter?->name ?? '-',
                     'submitterRole' => $review->submitter?->roleLabel() ?? '-',
                     'prospectName' => $review->prospect?->name ?? '-',
@@ -728,6 +822,7 @@ class ReactApiController extends Controller
                 ['label' => 'Dashboard', 'href' => '/dashboard'],
                 ['label' => 'Prospek', 'href' => '/prospects'],
                 ['label' => 'Pipeline', 'href' => '/pipeline'],
+                ...($user->can('access-performance') ? [['label' => 'Command Center', 'href' => '/manager-insights']] : []),
                 ...($user->can('access-performance') ? [['label' => 'Kinerja', 'href' => '/kinerja-penjualan']] : []),
                 ...($user->can('access-chat-reviews') ? [['label' => 'Tinjauan Obrolan', 'href' => '/chat-reviews']] : []),
                 ...($user->can('access-knowledge-queue') ? [['label' => 'Antrian Pengetahuan', 'href' => '/knowledge-queue']] : []),
@@ -741,6 +836,95 @@ class ReactApiController extends Controller
                 'manageSystemSettings' => $user->can('manage-system-settings'),
             ],
         ]);
+    }
+
+    private function prospectOperationalFields(Prospect $prospect): array
+    {
+        return [
+            'aging_days' => $prospect->aging_days,
+            'last_activity_diff' => $prospect->last_activity_diff,
+            'is_stale' => $prospect->is_stale,
+            'status_updated_at' => $prospect->status_updated_at?->toISOString(),
+            'last_activity_at' => $prospect->last_activity_at?->toISOString(),
+            'follow_up_state' => $prospect->follow_up_state,
+            'priority_level' => $prospect->priority_level,
+            'overdue_days' => $prospect->overdue_days,
+        ];
+    }
+
+    private function objectionTypeOptions()
+    {
+        return collect(ProspectLog::OBJECTION_TYPES)->map(fn (string $type) => [
+            'value' => $type,
+            'label' => ProspectLog::OBJECTION_TYPE_LABELS[$type] ?? strtoupper($type),
+        ])->values();
+    }
+
+    private function emotionalStateOptions()
+    {
+        return collect(ProspectLog::EMOTIONAL_STATES)->map(fn (string $state) => [
+            'value' => $state,
+            'label' => ProspectLog::EMOTIONAL_STATE_LABELS[$state] ?? strtoupper($state),
+        ])->values();
+    }
+
+    private function activeFollowUpQuery(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', [Prospect::STATUS_PENUTUPAN, Prospect::STATUS_HILANG]);
+    }
+
+    private function overdueFollowUpQuery(Builder $query): Builder
+    {
+        return $this->activeFollowUpQuery($query)
+            ->whereDate('next_follow_up_date', '<', now()->toDateString());
+    }
+
+    private function dueTodayFollowUpQuery(Builder $query): Builder
+    {
+        return $this->activeFollowUpQuery($query)
+            ->whereDate('next_follow_up_date', now()->toDateString());
+    }
+
+    private function highPriorityProspectsQuery(Builder $query): Builder
+    {
+        $today = now()->toDateString();
+        $criticalCutoff = now()->subDays(2)->toDateString();
+
+        return $this->activeFollowUpQuery($query)
+            ->where(function (Builder $q) use ($today, $criticalCutoff) {
+                $q->whereDate('next_follow_up_date', '<=', $today)
+                    ->orWhereDate('next_follow_up_date', '<', $criticalCutoff);
+            });
+    }
+
+    private function staleProspectsQuery(Builder $query): Builder
+    {
+        $cutoff = now()->subDays(3);
+
+        return $query
+            ->whereNotIn('status', [Prospect::STATUS_PENUTUPAN, Prospect::STATUS_HILANG])
+            ->where(function (Builder $q) use ($cutoff) {
+                $q->where('last_activity_at', '<', $cutoff)
+                    ->orWhere(function (Builder $fallback) use ($cutoff) {
+                        $fallback->whereNull('last_activity_at')
+                            ->where('updated_at', '<', $cutoff);
+                    });
+            });
+    }
+
+    private function agingOverSevenDaysQuery(Builder $query): Builder
+    {
+        $cutoff = now()->subDays(7);
+
+        return $query
+            ->whereNotIn('status', [Prospect::STATUS_PENUTUPAN, Prospect::STATUS_HILANG])
+            ->where(function (Builder $q) use ($cutoff) {
+                $q->where('status_updated_at', '<', $cutoff)
+                    ->orWhere(function (Builder $fallback) use ($cutoff) {
+                        $fallback->whereNull('status_updated_at')
+                            ->where('created_at', '<', $cutoff);
+                    });
+            });
     }
 
     private function scopedProspects(User $user): Builder
@@ -795,21 +979,31 @@ class ReactApiController extends Controller
             })
             ->when($request->string('follow_up')->toString(), function (Builder $q, string $followUpFilter) {
                 if ($followUpFilter === 'overdue') {
-                    $q->where('status', '!=', Prospect::STATUS_HILANG)
-                        ->whereDate('next_follow_up_date', '<', now()->toDateString());
+                    $this->overdueFollowUpQuery($q);
                 }
 
                 if ($followUpFilter === 'today') {
-                    $q->where('status', '!=', Prospect::STATUS_HILANG)
-                        ->whereDate('next_follow_up_date', now()->toDateString());
+                    $this->dueTodayFollowUpQuery($q);
                 }
 
                 if ($followUpFilter === 'week') {
-                    $q->where('status', '!=', Prospect::STATUS_HILANG)
+                    $this->activeFollowUpQuery($q)
                         ->whereBetween('next_follow_up_date', [
                             now()->toDateString(),
                             now()->addDays(7)->toDateString(),
                         ]);
+                }
+
+                if ($followUpFilter === 'soon') {
+                    $this->activeFollowUpQuery($q)
+                        ->whereBetween('next_follow_up_date', [
+                            now()->addDay()->toDateString(),
+                            now()->addDays(2)->toDateString(),
+                        ]);
+                }
+
+                if ($followUpFilter === 'stale') {
+                    $this->staleProspectsQuery($q);
                 }
             });
     }

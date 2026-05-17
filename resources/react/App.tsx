@@ -7,6 +7,7 @@ import {
 import {
     BarChart3,
     BookOpenCheck,
+    Command,
     KanbanSquare,
     LayoutDashboard,
     LogOut,
@@ -30,6 +31,7 @@ import {
 } from "@/pages/ChatReviewFormPage";
 import { ChatReviewDetailPage } from "@/pages/ChatReviewDetailPage";
 import { KnowledgeQueuePage } from "@/pages/KnowledgeQueuePage";
+import { ManagerInsightsPage } from "@/pages/ManagerInsightsPage";
 import { PerformancePage } from "@/pages/PerformancePage";
 import { PipelinePage } from "@/pages/PipelinePage";
 import { ProspectsPage } from "@/pages/ProspectsPage";
@@ -43,6 +45,7 @@ const navIcons = {
     Dashboard: LayoutDashboard,
     Prospek: Users,
     Pipeline: KanbanSquare,
+    "Command Center": Command,
     Kinerja: BarChart3,
     "Tinjauan Obrolan": MessageSquareQuote,
     "Antrian Pengetahuan": BookOpenCheck,
@@ -267,6 +270,10 @@ function AppShell() {
                         />
                         <Route path="/prospects" component={ProspectsPage} />
                         <Route path="/pipeline" component={PipelinePage} />
+                        <Route
+                            path="/manager-insights"
+                            component={ManagerInsightsPage}
+                        />
                         <Route
                             path="/kinerja-penjualan"
                             component={PerformancePage}

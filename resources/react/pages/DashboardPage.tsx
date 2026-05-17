@@ -6,12 +6,12 @@ import { useSearch } from "wouter/use-browser-location";
 
 import { boot, fetchJson } from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import type { DashboardResponse } from "@/types";
+import type { DashboardResponse, SalesDisciplineMetric } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Option } from "@/types";
-import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, MetricCard, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, followUpLabel, followUpVariant, healthVariant, LoadingState, MetricCard, MiniMetric, NativeSelect, priorityVariant, statusVariant } from "@/components/app/shared";
 
 export function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -27,7 +27,7 @@ export function DashboardPage() {
   if (dashboard.isLoading) return <LoadingState label="Memuat dashboard..." />;
   if (dashboard.isError || !dashboard.data) return <ErrorState />;
 
-  const { kpis, statusSummary, upcomingFollowUp, lostReasonSummary, filters } = dashboard.data;
+  const { kpis, statusSummary, upcomingFollowUp, lostReasonSummary, disciplineSnapshot, filters } = dashboard.data;
 
   return (
     <div className="space-y-4">
@@ -63,7 +63,11 @@ export function DashboardPage() {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <MiniMetric label="Overdue" value={kpis.overdueCount} variant="danger" />
-              <MiniMetric label="Due Today" value={kpis.dueTodayCount} variant="warn" />
+              <MiniMetric label="Due Today" value={kpis.dueTodayCount} variant="orange" />
+              <MiniMetric label="Stale" value={kpis.staleCount} variant="danger" />
+              <MiniMetric label="Stale + Overdue" value={kpis.staleOverdueCount} variant="danger" />
+              <MiniMetric label="High Priority" value={kpis.highPriorityCount} variant="warn" />
+              <MiniMetric label="> 7 Hari" value={kpis.agingOverSevenDaysCount} variant="warn" />
             </div>
           </div>
         </CardHeader>
@@ -86,6 +90,33 @@ export function DashboardPage() {
         <MetricCard label="Prospek Reguler" value={kpis.regularProspects} note="Prospek dengan kategori akun reguler." />
         <MetricCard label="Input Hari Ini" value={kpis.todayInputCount} note="Aktivitas yang tercatat pada hari ini." />
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="CRM Health" value={Math.round(kpis.crmHealthScore)} note={`${formatPercent(kpis.crmHealthScore)} score rata-rata discipline sales.`} />
+        <MetricCard label="Total Stale Leads" value={kpis.staleCount} note="Lead aktif tanpa activity lebih dari 3 hari." />
+        <MetricCard label="Overdue Ratio" value={Math.round(kpis.overdueRatio)} note={`${formatPercent(kpis.overdueRatio)}% active lead sudah telat follow up.`} />
+        <MetricCard label="Active Sales Today" value={kpis.activeSalesTodayCount} note="Sales yang punya ProspectLog hari ini." />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <MetricCard label="Overdue Follow Up" value={kpis.overdueCount} note="Follow up aktif yang sudah melewati tanggal jadwal." />
+        <MetricCard label="Due Today" value={kpis.dueTodayCount} note="Lead yang perlu disentuh hari ini." />
+        <MetricCard label="Stale + Overdue" value={kpis.staleOverdueCount} note="Lead yang diam dan sudah telat follow up." />
+        <MetricCard label="High Priority Leads" value={kpis.highPriorityCount} note="Lead critical atau high yang butuh action cepat." />
+        <MetricCard label="Lead > 7 Hari di Stage" value={kpis.agingOverSevenDaysCount} note="Lead aktif yang terlalu lama di status saat ini." />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Discipline Snapshot</CardTitle>
+          <CardDescription>Sinyal cepat buat coaching operasional hari ini.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 lg:grid-cols-3">
+          <DashboardInsightPanel title="Overdue Tertinggi" items={disciplineSnapshot.topOverdueSales} value={(item) => `${item.overdue_lead_count} overdue`} />
+          <DashboardInsightPanel title="Paling Disiplin" items={disciplineSnapshot.mostDisciplinedSales} value={(item) => `${formatPercent(item.crm_activity_score)} score`} />
+          <DashboardInsightPanel title="Tanpa Activity Hari Ini" items={disciplineSnapshot.salesWithoutActivityToday} value={() => "0 activity"} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Bridge Candidate" value={kpis.bridgeCandidatesCount} note="Prospek yang punya peluang transisi mini ke reguler." />
@@ -180,12 +211,20 @@ export function DashboardPage() {
         </CardHeader>
         <CardContent>
           <DataTable
-            headers={["Kode", "Prospek", "Owner", "Follow Up", "Status", "Aksi"]}
+            headers={["Kode", "Prospek", "Owner", "Follow Up", "Priority", "Status", "Aksi"]}
             rows={upcomingFollowUp.map((item) => [
               item.prospectCode,
               item.name,
               item.owner,
-              item.nextFollowUpDateLabel,
+              <div key={`${item.id}-followup`} className="space-y-2">
+                <Badge variant={followUpVariant(item.follow_up_state)}>
+                  {followUpLabel(item.follow_up_state, item.overdue_days)}
+                </Badge>
+                <p className="text-xs text-[#d9c995]/70">{item.nextFollowUpDateLabel}</p>
+              </div>,
+              <Badge key={`${item.id}-priority`} variant={priorityVariant(item.priority_level)}>
+                {item.priority_level}
+              </Badge>,
               <Badge key={`${item.id}-status`} variant={statusVariant(item.status)}>
                 {item.statusLabel}
               </Badge>,
@@ -197,6 +236,34 @@ export function DashboardPage() {
           />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function DashboardInsightPanel({
+  title,
+  items,
+  value,
+}: {
+  title: string;
+  items: SalesDisciplineMetric[];
+  value: (item: SalesDisciplineMetric) => string;
+}) {
+  return (
+    <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+      <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">{title}</p>
+      <div className="mt-3 space-y-2">
+        {items.length === 0 ? (
+          <p className="text-sm text-[#d9c995]/70">Belum ada data.</p>
+        ) : (
+          items.map((item) => (
+            <div key={item.sales_id} className="flex items-center justify-between gap-3 text-sm">
+              <span className="truncate text-[#fff2a2]">{item.sales_name}</span>
+              <Badge variant={healthVariant(item.health_state)}>{value(item)}</Badge>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -225,6 +292,7 @@ function DashboardFilters({
     bridge_candidate: current.bridge_candidate ?? "",
     bridge_status: current.bridge_status ?? "",
     lost_reason: current.lost_reason ?? "",
+    follow_up: current.follow_up ?? "",
   });
 
   return (
@@ -249,6 +317,17 @@ function DashboardFilters({
         ]}
       />
       <NativeSelect value={form.bridge_status} onChange={(value) => setForm((prev) => ({ ...prev, bridge_status: value }))} placeholder="Semua bridge status" options={filters.bridgeStatuses} />
+      <NativeSelect
+        value={form.follow_up}
+        onChange={(value) => setForm((prev) => ({ ...prev, follow_up: value }))}
+        placeholder="Semua follow up"
+        options={[
+          { value: "overdue", label: "Overdue Only" },
+          { value: "today", label: "Due Today" },
+          { value: "soon", label: "Due Soon" },
+          { value: "stale", label: "Stale Leads" },
+        ]}
+      />
       <div className="md:col-span-2 flex flex-wrap gap-3">
         <div className="flex-1">
           <NativeSelect value={form.lost_reason} onChange={(value) => setForm((prev) => ({ ...prev, lost_reason: value }))} placeholder="Semua lost reason" options={filters.lostReasons} />
