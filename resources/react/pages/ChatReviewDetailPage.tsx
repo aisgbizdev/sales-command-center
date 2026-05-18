@@ -41,7 +41,7 @@ export function ChatReviewDetailPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Aksi</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#d9c995]/70">Aksi</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {detail.data.canEdit ? (
                 <Button type="button" variant="secondary" onClick={() => setLocation(`/chat-reviews/${review.id}/edit`)}>
@@ -50,42 +50,42 @@ export function ChatReviewDetailPage({ params }: { params: { id: string } }) {
                 </Button>
               ) : null}
             </div>
-            <div className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-200">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Pengirim</p>
+            <div className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.04] p-4 text-sm text-[#d9c995]">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Pengirim</p>
               <p className="mt-2">{review.submitter}</p>
-              <p className="text-xs text-slate-500">{review.submitterRole}</p>
+              <p className="text-xs text-[#d9c995]/70">{review.submitterRole}</p>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
           <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ringkasan</p>
-            <p className="mt-3 whitespace-pre-wrap text-sm text-slate-200">{review.chatSummary}</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Ringkasan</p>
+            <p className="mt-3 whitespace-pre-wrap text-sm text-[#d9c995]">{review.chatSummary}</p>
           </div>
 
           {review.chatExcerpt ? (
             <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Potongan Chat</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-slate-200">{review.chatExcerpt}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Potongan Chat</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-[#d9c995]">{review.chatExcerpt}</p>
             </div>
           ) : null}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Yang Berhasil</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-slate-200">{review.whatWorked || "-"}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Yang Berhasil</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-[#d9c995]">{review.whatWorked || "-"}</p>
             </div>
             <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Yang Gagal</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-slate-200">{review.whatFailed || "-"}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Yang Gagal</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-[#d9c995]">{review.whatFailed || "-"}</p>
             </div>
           </div>
 
           {review.suggestedKnowledgeUpdate ? (
             <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Saran Update Pengetahuan GPT</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-slate-200">{review.suggestedKnowledgeUpdate}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Saran Update Pengetahuan GPT</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-[#d9c995]">{review.suggestedKnowledgeUpdate}</p>
             </div>
           ) : null}
         </CardContent>

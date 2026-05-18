@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 
 import type { ProspectDetailResponse } from "@/types";
 import { fetchJson, sendJson } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState, LoadingState } from "@/components/app/shared";
@@ -23,12 +24,18 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
   const [dailyActivityType, setDailyActivityType] = React.useState("");
   const [dailySummary, setDailySummary] = React.useState("");
   const [dailyResult, setDailyResult] = React.useState("");
+  const [objectionType, setObjectionType] = React.useState("");
+  const [objectionDetail, setObjectionDetail] = React.useState("");
+  const [emotionalState, setEmotionalState] = React.useState("");
 
   React.useEffect(() => {
     if (!detail.data) return;
     setDailyActivityType("");
     setDailySummary("");
     setDailyResult("");
+    setObjectionType("");
+    setObjectionDetail("");
+    setEmotionalState("");
   }, [detail.data?.prospect.id]);
 
   const logMutation = useMutation({
@@ -38,6 +45,9 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
         daily_activity_type: dailyActivityType,
         daily_summary: dailySummary,
         daily_result: dailyResult || null,
+        objection_type: objectionType || null,
+        objection_detail: objectionDetail || null,
+        emotional_state: emotionalState || null,
       });
     },
     onSuccess: async (data) => {
@@ -45,6 +55,9 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
       setDailyActivityType("");
       setDailySummary("");
       setDailyResult("");
+      setObjectionType("");
+      setObjectionDetail("");
+      setEmotionalState("");
       await queryClient.invalidateQueries({ queryKey: ["prospect", id] });
       await queryClient.invalidateQueries({ queryKey: ["prospects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -77,7 +90,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Aksi</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#d9c995]/70">Aksi</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {detail.data.canEdit ? (
                 <Button type="button" variant="secondary" onClick={() => setLocation(`/prospects/${prospect.id}/edit`)}>
@@ -87,8 +100,8 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
               ) : null}
             </div>
             {prospect.notes ? (
-              <div className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-200">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Catatan Internal</p>
+              <div className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.04] p-4 text-sm text-[#d9c995]">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Catatan Internal</p>
                 <p className="mt-2 whitespace-pre-wrap">{prospect.notes}</p>
               </div>
             ) : null}
@@ -97,23 +110,23 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
 
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Status</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Status</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.statusLabel}</p>
           </div>
           <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Kategori Akun</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Kategori Akun</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.accountCategoryLabel}</p>
           </div>
           <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Prioritas</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Prioritas</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.priority}</p>
           </div>
           <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Follow Up</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Follow Up</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.nextFollowUpDateLabel}</p>
           </div>
           <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Estimasi</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Estimasi</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.estimationValueLabel}</p>
           </div>
         </CardContent>
@@ -127,12 +140,12 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
           </CardHeader>
           <CardContent className="grid gap-3">
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-sm text-slate-200">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
                 Jenis Aktivitas
                 <select
                   value={dailyActivityType}
                   onChange={(event) => setDailyActivityType(event.target.value)}
-                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
                 >
                   <option value="">Pilih</option>
                   {detail.data.types.map((item) => (
@@ -142,23 +155,64 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
                   ))}
                 </select>
               </label>
-              <label className="grid gap-2 text-sm text-slate-200">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
                 Ringkasan
                 <input
                   value={dailySummary}
                   onChange={(event) => setDailySummary(event.target.value)}
-                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
                   placeholder="Contoh: Follow up via telepon..."
                 />
               </label>
             </div>
-            <label className="grid gap-2 text-sm text-slate-200">
+            <label className="grid gap-2 text-sm text-[#d9c995]">
               Hasil
               <textarea
                 value={dailyResult}
                 onChange={(event) => setDailyResult(event.target.value)}
-                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
                 placeholder="Opsional"
+              />
+            </label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Objection Type
+                <select
+                  value={objectionType}
+                  onChange={(event) => setObjectionType(event.target.value)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                >
+                  <option value="">Tidak ada objection</option>
+                  {detail.data.objectionTypes.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Emotional State
+                <select
+                  value={emotionalState}
+                  onChange={(event) => setEmotionalState(event.target.value)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                >
+                  <option value="">Tidak dicatat</option>
+                  {detail.data.emotionalStates.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="grid gap-2 text-sm text-[#d9c995]">
+              Detail Objection
+              <textarea
+                value={objectionDetail}
+                onChange={(event) => setObjectionDetail(event.target.value)}
+                className="min-h-[82px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                placeholder="Opsional, contoh: user minta bukti profit member lama."
               />
             </label>
             <div>
@@ -182,7 +236,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
         </CardHeader>
         <CardContent>
           {logs.length === 0 ? (
-            <div className="rounded-[22px] border border-dashed border-white/10 bg-white/5 p-6 text-center text-sm text-slate-500">
+            <div className="rounded-[22px] border border-dashed border-white/10 bg-white/5 p-6 text-center text-sm text-[#d9c995]/70">
               Belum ada riwayat aktivitas.
             </div>
           ) : (
@@ -190,8 +244,8 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
               <table className="min-w-full border-collapse bg-white/[0.02]">
                 <thead>
                   <tr className="bg-white/[0.03]">
-                    {["Tanggal", "Tipe", "Ringkasan", "Hasil", "User"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                    {["Tanggal", "Tipe", "Ringkasan", "Objection", "Hasil", "User"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-[11px] uppercase tracking-[0.18em] text-[#d9c995]">
                         {h}
                       </th>
                     ))}
@@ -199,10 +253,18 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
                 </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <tr key={log.id} className="border-t border-white/10 align-top text-sm text-slate-200 odd:bg-transparent even:bg-white/[0.02]">
+                    <tr key={log.id} className="border-t border-white/10 align-top text-sm text-[#d9c995] odd:bg-transparent even:bg-white/[0.02]">
                       <td className="px-4 py-4">{log.dateLabel}</td>
                       <td className="px-4 py-4">{log.activityTypeLabel}</td>
                       <td className="px-4 py-4">{log.summary}</td>
+                      <td className="px-4 py-4">
+                        {log.objectionTypeLabel ? (
+                          <div className="space-y-2">
+                            <Badge variant="warn">{log.objectionTypeLabel}</Badge>
+                            {log.emotionalStateLabel ? <p className="text-xs text-[#d9c995]/70">{log.emotionalStateLabel}</p> : null}
+                          </div>
+                        ) : "-"}
+                      </td>
                       <td className="px-4 py-4">{log.result}</td>
                       <td className="px-4 py-4">{log.user}</td>
                     </tr>
@@ -216,4 +278,3 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-

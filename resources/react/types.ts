@@ -12,6 +12,157 @@ export type MetaResponse = {
   };
 };
 
+export type TeamOption = Option & { unitId: string; unitName: string };
+
+export type SalesDisciplineMetric = {
+  sales_id: number;
+  sales_name: string;
+  active_lead_count: number;
+  follow_up_lead_count: number;
+  overdue_lead_count: number;
+  stale_lead_count: number;
+  follow_up_compliance_rate: number;
+  overdue_ratio: number;
+  stale_lead_ratio: number;
+  avg_update_delay_hours: number;
+  crm_activity_score: number;
+  daily_activity_count: number;
+  health_state: string;
+};
+
+export type ObjectionMetric = {
+  objection: string;
+  label: string;
+  total: number;
+};
+
+export type ObjectionConversionMetric = ObjectionMetric & {
+  closing: number;
+  conversionRate: number;
+};
+
+export type HighRiskObjectionMetric = ObjectionMetric & {
+  conversionRate: number;
+  lostRate: number;
+  riskScore: number;
+};
+
+export type ObjectionInsightsResponse = {
+  topObjections: ObjectionMetric[];
+  objectionByCategory: {
+    category: string;
+    label: string;
+    items: ObjectionMetric[];
+  }[];
+  objectionConversion: ObjectionConversionMetric[];
+  objectionBySource: {
+    source: string;
+    label: string;
+    items: (ObjectionMetric & { percent: number })[];
+  }[];
+  highRiskObjections: HighRiskObjectionMetric[];
+  managerInsights: {
+    mostCommonThisWeek: ObjectionMetric | null;
+    lowestConversion: HighRiskObjectionMetric | null;
+    regularAccountTopObjection: ObjectionMetric | null;
+  };
+};
+
+export type ManagerInsightsResponse = {
+  teamHealth: {
+    totalActiveLeads: number;
+    overdueLeads: number;
+    staleLeads: number;
+    dueToday: number;
+    activeSalesToday: number;
+    inactiveSalesToday: number;
+    avgFollowUpCompliance: number;
+    avgCrmActivityScore: number;
+  };
+  alerts: { level: string; message: string }[];
+  salesRanking: {
+    topDisciplined: SalesDisciplineMetric[];
+    needsAttention: SalesDisciplineMetric[];
+  };
+  pipelineBottleneck: {
+    status: string;
+    label: string;
+    total: number;
+    stuckCount: number;
+    percent: number;
+  }[];
+  priorityLeads: {
+    id: number;
+    prospectCode: string;
+    name: string;
+    owner: string;
+    status: string;
+    statusLabel: string;
+    overdueDays: number;
+    nextFollowUpDateLabel: string;
+    priorityLevel: string;
+    detailUrl: string;
+  }[];
+  objectionTrends: {
+    mostCommon: ObjectionMetric | null;
+    worstConversion: HighRiskObjectionMetric | null;
+    trendingUp: ObjectionMetric[];
+  };
+};
+
+export type UsersResponse = {
+  items: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    roleLabel: string;
+    unitId: string;
+    unitName: string;
+    teamId: string;
+    teamName: string;
+    createdAtLabel: string;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+  meta: { currentPage: number; lastPage: number; perPage: number; total: number };
+  filters: {
+    current: Record<string, string>;
+    roles: Option[];
+    units: Option[];
+    teams: TeamOption[];
+  };
+};
+
+export type UserMasterDataResponse = {
+  roles: {
+    id: number;
+    code: string;
+    label: string;
+    description: string | null;
+    sortOrder: number;
+    isSystem: boolean;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+  units: {
+    id: number;
+    name: string;
+    code: string;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+  teams: {
+    id: number;
+    name: string;
+    code: string;
+    unitId: string;
+    unitName: string;
+    usageCount: number;
+    canDelete: boolean;
+  }[];
+};
+
 export type DashboardResponse = {
   kpis: {
     totalProspects: number;
@@ -26,6 +177,13 @@ export type DashboardResponse = {
     todayInputCount: number;
     overdueCount: number;
     dueTodayCount: number;
+    staleCount: number;
+    staleOverdueCount: number;
+    highPriorityCount: number;
+    agingOverSevenDaysCount: number;
+    crmHealthScore: number;
+    overdueRatio: number;
+    activeSalesTodayCount: number;
     healthPercent: number;
   };
   statusSummary: { key: string; label: string; total: number }[];
@@ -37,9 +195,22 @@ export type DashboardResponse = {
     nextFollowUpDateLabel: string;
     status: string;
     statusLabel: string;
+    aging_days: number;
+    last_activity_diff: string;
+    is_stale: boolean;
+    status_updated_at: string | null;
+    last_activity_at: string | null;
+    follow_up_state: string;
+    priority_level: string;
+    overdue_days: number;
     detailUrl: string;
   }[];
   lostReasonSummary: { key: string; label: string; total: number }[];
+  disciplineSnapshot: {
+    topOverdueSales: SalesDisciplineMetric[];
+    mostDisciplinedSales: SalesDisciplineMetric[];
+    salesWithoutActivityToday: SalesDisciplineMetric[];
+  };
   filters: {
     current: Record<string, string>;
     accountCategories: Option[];
@@ -62,6 +233,7 @@ export type ProspectsResponse = {
     gptModeLabel: string;
     userTemperatureLabel: string;
     dominantEmotionLabel: string;
+    mainObjection: string | null;
     bridgeCandidate: boolean;
     bridgeStatusLabel: string;
     lostReasonLabel: string;
@@ -72,6 +244,14 @@ export type ProspectsResponse = {
     statusLabel: string;
     nextFollowUpDateLabel: string;
     isOverdue: boolean;
+    aging_days: number;
+    last_activity_diff: string;
+    is_stale: boolean;
+    status_updated_at: string | null;
+    last_activity_at: string | null;
+    follow_up_state: string;
+    priority_level: string;
+    overdue_days: number;
     showUrl: string;
     editUrl: string;
     canEdit: boolean;
@@ -118,6 +298,14 @@ export type PipelineResponse = {
       nextFollowUpDate: string | null;
       nextFollowUpDateLabel: string;
       isOverdue: boolean;
+      aging_days: number;
+      last_activity_diff: string;
+      is_stale: boolean;
+      status_updated_at: string | null;
+      last_activity_at: string | null;
+      follow_up_state: string;
+      priority_level: string;
+      overdue_days: number;
       quickUpdateUrl: string;
       detailUrl: string;
       canEdit: boolean;
@@ -150,7 +338,14 @@ export type PerformanceResponse = {
     overdueCount: number;
     totalValueLabel: string;
     ratio: number;
+    discipline: SalesDisciplineMetric | null;
   }[];
+  operationalDiscipline: SalesDisciplineMetric[];
+  managerInsights: {
+    topOverdueSales: SalesDisciplineMetric[];
+    mostDisciplinedSales: SalesDisciplineMetric[];
+    salesWithoutActivityToday: SalesDisciplineMetric[];
+  };
   statusBreakdown: { key: string; label: string; total: number }[];
   overdueProspects: {
     id: number;
@@ -160,6 +355,14 @@ export type PerformanceResponse = {
     status: string;
     statusLabel: string;
     nextFollowUpDateLabel: string;
+    aging_days: number;
+    last_activity_diff: string;
+    is_stale: boolean;
+    status_updated_at: string | null;
+    last_activity_at: string | null;
+    follow_up_state: string;
+    priority_level: string;
+    overdue_days: number;
     detailUrl: string;
   }[];
   objectionFrequency: { label: string; total: number }[];
@@ -188,6 +391,10 @@ export type ChatReviewsResponse = {
     statusLabel: string;
     summary: string;
     suggestedKnowledgeUpdate: string | null;
+    objectionType: string | null;
+    objectionTypeLabel: string | null;
+    emotionalState: string | null;
+    emotionalStateLabel: string | null;
     submitter: string;
     submitterRole: string;
     prospectName: string;
@@ -274,6 +481,14 @@ export type ProspectDetailResponse = {
     estimationValue: number;
     estimationValueLabel: string;
     notes: string | null;
+    aging_days: number;
+    last_activity_diff: string;
+    is_stale: boolean;
+    status_updated_at: string | null;
+    last_activity_at: string | null;
+    follow_up_state: string;
+    priority_level: string;
+    overdue_days: number;
   };
   logs: {
     id: number;
@@ -282,6 +497,11 @@ export type ProspectDetailResponse = {
     activityTypeLabel: string;
     summary: string;
     result: string;
+    objectionType: string | null;
+    objectionTypeLabel: string | null;
+    objectionDetail: string | null;
+    emotionalState: string | null;
+    emotionalStateLabel: string | null;
     user: string;
   }[];
   canEdit: boolean;
@@ -289,6 +509,8 @@ export type ProspectDetailResponse = {
   updateUrl: string;
   storeLogUrl: string;
   types: Option[];
+  objectionTypes: Option[];
+  emotionalStates: Option[];
 };
 
 export type ProspectFormResponse = {
@@ -311,6 +533,9 @@ export type ChatReviewDetailResponse = {
     title: string;
     channel: string;
     outcome: string;
+    objectionType: string | null;
+    objectionDetail: string | null;
+    emotionalState: string | null;
     status: string;
     customerName: string;
     customerCompany: string | null;
@@ -336,4 +561,6 @@ export type ChatReviewFormResponse = {
   outcomes: Option[];
   statuses: Option[];
   prospects: Option[];
+  objectionTypes: Option[];
+  emotionalStates: Option[];
 };

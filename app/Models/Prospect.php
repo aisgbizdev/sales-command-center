@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -91,6 +92,16 @@ class Prospect extends Model
         'alasan_lain' => 'Alasan Lain',
     ];
     public const SOURCES = ['referensi', 'iklan', 'walkin', 'sosial_media', 'lainnya'];
+    public const FOLLOW_UP_STATE_OVERDUE = 'overdue';
+    public const FOLLOW_UP_STATE_TODAY = 'today';
+    public const FOLLOW_UP_STATE_SOON = 'soon';
+    public const FOLLOW_UP_STATE_HEALTHY = 'healthy';
+    public const FOLLOW_UP_STATE_NONE = 'none';
+
+    public const PRIORITY_LEVEL_CRITICAL = 'critical';
+    public const PRIORITY_LEVEL_HIGH = 'high';
+    public const PRIORITY_LEVEL_MEDIUM = 'medium';
+    public const PRIORITY_LEVEL_NORMAL = 'normal';
 
     protected $fillable = [
         'prospect_code',
@@ -109,6 +120,8 @@ class Prospect extends Model
         'lost_reason',
         'last_contact_at',
         'status',
+        'status_updated_at',
+        'last_activity_at',
         'priority',
         'estimation_value',
         'next_follow_up_date',
@@ -125,7 +138,137 @@ class Prospect extends Model
             'estimation_value' => 'decimal:2',
             'bridge_candidate' => 'boolean',
             'last_contact_at' => 'datetime',
+            'status_updated_at' => 'datetime',
+            'last_activity_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Prospect $prospect) {
+            $now = now();
+
+            $prospect->status_updated_at ??= $now;
+            $prospect->last_activity_at ??= $now;
+        });
+
+        static::saving(function (Prospect $prospect) {
+            if (! $prospect->exists) {
+                return;
+            }
+
+            $now = now();
+
+            if ($prospect->isDirty('status')) {
+                $prospect->status_updated_at = $now;
+            }
+
+            if ($prospect->isDirty()) {
+                $prospect->last_activity_at = $now;
+            }
+        });
+    }
+
+    protected function agingDays(): Attribute
+    {
+        return Attribute::get(function (): int {
+            $statusUpdatedAt = $this->status_updated_at ?? $this->created_at;
+
+            if (! $statusUpdatedAt) {
+                return 0;
+            }
+
+            return (int) $statusUpdatedAt->copy()->startOfDay()->diffInDays(now()->startOfDay());
+        });
+    }
+
+    protected function lastActivityDiff(): Attribute
+    {
+        return Attribute::get(function (): string {
+            $lastActivityAt = $this->last_activity_at ?? $this->updated_at;
+
+            if (! $lastActivityAt) {
+                return '-';
+            }
+
+            return $lastActivityAt->copy()->locale('id')->diffForHumans();
+        });
+    }
+
+    protected function isStale(): Attribute
+    {
+        return Attribute::get(function (): bool {
+            if (in_array($this->status, [self::STATUS_PENUTUPAN, self::STATUS_HILANG], true)) {
+                return false;
+            }
+
+            $lastActivityAt = $this->last_activity_at ?? $this->updated_at;
+
+            if (! $lastActivityAt) {
+                return false;
+            }
+
+            return $lastActivityAt->lt(now()->subDays(3));
+        });
+    }
+
+    protected function followUpState(): Attribute
+    {
+        return Attribute::get(function (): string {
+            if (! $this->next_follow_up_date || in_array($this->status, [self::STATUS_PENUTUPAN, self::STATUS_HILANG], true)) {
+                return self::FOLLOW_UP_STATE_NONE;
+            }
+
+            $today = now()->startOfDay();
+            $followUpDate = $this->next_follow_up_date->copy()->startOfDay();
+
+            if ($followUpDate->lt($today)) {
+                return self::FOLLOW_UP_STATE_OVERDUE;
+            }
+
+            if ($followUpDate->isSameDay($today)) {
+                return self::FOLLOW_UP_STATE_TODAY;
+            }
+
+            if ($followUpDate->between($today->copy()->addDay(), $today->copy()->addDays(2), true)) {
+                return self::FOLLOW_UP_STATE_SOON;
+            }
+
+            return self::FOLLOW_UP_STATE_HEALTHY;
+        });
+    }
+
+    protected function overdueDays(): Attribute
+    {
+        return Attribute::get(function (): int {
+            if ($this->follow_up_state !== self::FOLLOW_UP_STATE_OVERDUE || ! $this->next_follow_up_date) {
+                return 0;
+            }
+
+            return (int) $this->next_follow_up_date->copy()->startOfDay()->diffInDays(now()->startOfDay());
+        });
+    }
+
+    protected function priorityLevel(): Attribute
+    {
+        return Attribute::get(function (): string {
+            if (
+                $this->overdue_days > 2
+                || ($this->is_stale && $this->follow_up_state === self::FOLLOW_UP_STATE_OVERDUE)
+            ) {
+                return self::PRIORITY_LEVEL_CRITICAL;
+            }
+
+            if (in_array($this->follow_up_state, [self::FOLLOW_UP_STATE_OVERDUE, self::FOLLOW_UP_STATE_TODAY], true)) {
+                return self::PRIORITY_LEVEL_HIGH;
+            }
+
+            if ($this->follow_up_state === self::FOLLOW_UP_STATE_SOON) {
+                return self::PRIORITY_LEVEL_MEDIUM;
+            }
+
+            return self::PRIORITY_LEVEL_NORMAL;
+        });
     }
 
     public function unit(): BelongsTo

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable, ErrorState, OverlayModal, buildQuery, LoadingState, movePage, NativeSelect, statusVariant } from "@/components/app/shared";
+import { DataTable, ErrorState, OverlayModal, buildQuery, followUpLabel, followUpVariant, LoadingState, movePage, NativeSelect, priorityVariant, statusVariant } from "@/components/app/shared";
 
 export function ProspectsPage() {
   const [location, setLocation] = useLocation();
@@ -79,29 +79,43 @@ export function ProspectsPage() {
         </CardHeader>
         <CardContent>
           <DataTable
-            headers={["Kode", "Nama", "Kategori", "AI Qualification", "Owner", "Status", "Follow Up", "Aksi"]}
+            headers={["Kode", "Nama", "Kategori", "AI Qualification", "Owner", "Status", "Priority", "Aging", "Last Activity", "Follow Up", "Aksi"]}
             rows={items.map((item) => [
               item.prospectCode,
               <div key={`${item.id}-name`}>
-                <p className="font-medium text-white">{item.name}</p>
-                <p className="text-xs text-slate-500">{item.company}</p>
-                <p className="text-xs text-slate-500">{item.team} / {item.unit}</p>
+                <p className="font-medium text-[#fff2a2]">{item.name}</p>
+                <p className="text-xs text-[#d9c995]/70">{item.company}</p>
+                <p className="text-xs text-[#d9c995]/70">{item.team} / {item.unit}</p>
               </div>,
               <div key={`${item.id}-category`} className="space-y-2">
                 <Badge variant="info">{item.accountCategoryLabel}</Badge>
-                <div className="text-xs text-slate-500">{item.bridgeStatusLabel}</div>
+                <div className="text-xs text-[#d9c995]/70">{item.bridgeStatusLabel}</div>
               </div>,
-              <div key={`${item.id}-qualification`} className="space-y-2 text-xs text-slate-400">
+              <div key={`${item.id}-qualification`} className="space-y-2 text-xs text-[#d9c995]">
                 <div>GPT: {item.gptModeLabel}</div>
                 <div>Suhu: {item.userTemperatureLabel}</div>
                 <div>Emosi: {item.dominantEmotionLabel}</div>
                 <div>Lost: {item.lostReasonLabel}</div>
+                {item.mainObjection ? <Badge variant="warn">{item.mainObjection}</Badge> : null}
                 {item.bridgeCandidate ? <Badge variant="warn">Bridge Candidate</Badge> : null}
               </div>,
               item.owner,
               <Badge key={`${item.id}-status`} variant={statusVariant(item.status)}>
                 {item.statusLabel}
               </Badge>,
+              <div key={`${item.id}-priority`} className="space-y-2">
+                <Badge variant={priorityVariant(item.priority_level)}>{item.priority_level}</Badge>
+                <div>
+                  <Badge variant={followUpVariant(item.follow_up_state)}>
+                    {followUpLabel(item.follow_up_state, item.overdue_days)}
+                  </Badge>
+                </div>
+              </div>,
+              <div key={`${item.id}-aging`} className="space-y-2">
+                <span>{item.aging_days} hari</span>
+                {item.is_stale ? <Badge variant="danger">Stale</Badge> : null}
+              </div>,
+              item.last_activity_diff,
               <div key={`${item.id}-followup`}>
                 {item.nextFollowUpDateLabel}
                 {item.isOverdue ? (
@@ -130,7 +144,7 @@ export function ProspectsPage() {
             emptyMessage="Belum ada prospek yang cocok dengan filter ini."
           />
 
-          <div className="mt-4 flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+          <div className="mt-4 flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
             <span>
               Halaman {meta.currentPage} dari {meta.lastPage}
             </span>
@@ -276,6 +290,8 @@ function ProspectFilters({
 	          options={[
 	            { value: "overdue", label: "Terlambat" },
 	            { value: "today", label: "Hari Ini" },
+	            { value: "soon", label: "Due Soon" },
+	            { value: "stale", label: "Stale Leads" },
 	            { value: "week", label: "7 Hari" },
 	          ]}
 	        />

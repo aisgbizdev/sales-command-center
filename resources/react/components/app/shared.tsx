@@ -8,11 +8,42 @@ import { formatNumber } from "@/lib/utils";
 import type { Option } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export function statusVariant(status: string): "default" | "info" | "success" | "warn" | "danger" {
+type BadgeVariant = "default" | "info" | "success" | "orange" | "warn" | "danger";
+
+export function statusVariant(status: string): BadgeVariant {
   if (status === "penutupan") return "success";
   if (status === "hilang") return "danger";
   if (status === "tindak_lanjut" || status === "sedang_berjalan") return "warn";
   return "info";
+}
+
+export function followUpVariant(state: string): BadgeVariant {
+  if (state === "overdue") return "danger";
+  if (state === "today") return "orange";
+  if (state === "soon") return "warn";
+  if (state === "healthy") return "success";
+  return "default";
+}
+
+export function followUpLabel(state: string, overdueDays = 0) {
+  if (state === "overdue") return overdueDays > 0 ? `Overdue ${overdueDays} hari` : "Overdue";
+  if (state === "today") return "Due Today";
+  if (state === "soon") return "Due Soon";
+  if (state === "healthy") return "Healthy";
+  return "No Follow Up";
+}
+
+export function priorityVariant(level: string): BadgeVariant {
+  if (level === "critical") return "danger";
+  if (level === "high") return "orange";
+  if (level === "medium") return "warn";
+  return "success";
+}
+
+export function healthVariant(state: string): BadgeVariant {
+  if (state === "critical") return "danger";
+  if (state === "warning") return "warn";
+  return "success";
 }
 
 export function getQueryString(location: string) {
@@ -45,9 +76,9 @@ export function MetricCard({ label, value, note }: { label: string; value: numbe
   return (
     <Card>
       <CardContent className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">{label}</p>
         <p className="text-4xl font-semibold tracking-[-0.05em]">{formatNumber(value)}</p>
-        <p className="text-sm leading-6 text-slate-400">{note}</p>
+        <p className="text-sm leading-6 text-[#d9c995]">{note}</p>
       </CardContent>
     </Card>
   );
@@ -60,11 +91,11 @@ export function MiniMetric({
 }: {
   label: string;
   value: number;
-  variant?: "info" | "warn" | "danger";
+  variant?: "info" | "orange" | "warn" | "danger";
 }) {
   return (
     <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">{label}</p>
       <div className="mt-3 flex items-center gap-3">
         <p className="text-2xl font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
         <Badge variant={variant}>{label}</Badge>
@@ -88,7 +119,7 @@ export function DataTable({
         <thead>
           <tr className="bg-white/[0.03]">
             {headers.map((header) => (
-              <th key={header} className="px-4 py-3 text-left text-[11px] uppercase tracking-[0.18em] text-slate-400">
+              <th key={header} className="px-4 py-3 text-left text-[11px] uppercase tracking-[0.18em] text-[#d9c995]">
                 {header}
               </th>
             ))}
@@ -97,13 +128,13 @@ export function DataTable({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={headers.length} className="px-4 py-10 text-center text-sm text-slate-500">
+              <td colSpan={headers.length} className="px-4 py-10 text-center text-sm text-[#d9c995]/70">
                 {emptyMessage}
               </td>
             </tr>
           ) : (
             rows.map((row, index) => (
-              <tr key={index} className="border-t border-white/10 align-top text-sm text-slate-200 odd:bg-transparent even:bg-white/[0.02]">
+              <tr key={index} className="border-t border-white/10 align-top text-sm text-[#d9c995] odd:bg-transparent even:bg-white/[0.02]">
                 {row.map((cell, cellIndex) => (
                   <td key={cellIndex} className="px-4 py-4">
                     {cell}
@@ -121,7 +152,7 @@ export function DataTable({
 export function LoadingState({ label }: { label: string }) {
   return (
     <Card>
-      <CardContent className="flex min-h-[260px] items-center justify-center gap-3 text-slate-400">
+      <CardContent className="flex min-h-[260px] items-center justify-center gap-3 text-[#d9c995]">
         <LoaderCircle className="h-5 w-5 animate-spin" />
         {label}
       </CardContent>
@@ -133,8 +164,8 @@ export function ErrorState() {
   return (
     <Card>
       <CardContent className="min-h-[260px] space-y-3 py-14 text-center">
-        <p className="text-xl font-semibold text-white">Gagal memuat data React preview.</p>
-        <p className="text-sm text-slate-400">Cek session login atau endpoint JSON backend.</p>
+        <p className="text-xl font-semibold text-[#fff2a2]">Gagal memuat data React preview.</p>
+        <p className="text-sm text-[#d9c995]">Cek session login atau endpoint JSON backend.</p>
       </CardContent>
     </Card>
   );
@@ -213,8 +244,8 @@ export function OverlayModal({
         >
           <div className="flex items-center gap-3">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{subtitle}</p>
-              <p className="truncate text-lg font-semibold text-white">{title}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[#d9c995]/70">{subtitle}</p>
+              <p className="truncate text-lg font-semibold text-[#fff2a2]">{title}</p>
             </div>
             <Button type="button" variant="secondary" size="sm" className="ml-auto" onClick={onClose}>
               Tutup

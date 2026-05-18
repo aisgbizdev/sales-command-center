@@ -11,7 +11,7 @@ class ReactAppController extends Controller
         $user = $request->user();
         $path = trim($request->path(), '/');
 
-        if (str_starts_with($path, 'kinerja-penjualan')) {
+        if (str_starts_with($path, 'kinerja-penjualan') || str_starts_with($path, 'manager-insights')) {
             abort_unless($user->can('access-performance'), 403);
         }
 
@@ -21,6 +21,10 @@ class ReactAppController extends Controller
 
         if (str_starts_with($path, 'knowledge-queue')) {
             abort_unless($user->can('access-knowledge-queue'), 403);
+        }
+
+        if (str_starts_with($path, 'users')) {
+            abort_unless($user->can('manage-users'), 403);
         }
 
         return view('react.app', [

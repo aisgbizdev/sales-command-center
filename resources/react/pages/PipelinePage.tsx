@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { buildQuery, ErrorState, OverlayModal, LoadingState, MiniMetric, NativeSelect, statusVariant } from "@/components/app/shared";
+import { buildQuery, ErrorState, followUpLabel, followUpVariant, OverlayModal, LoadingState, MiniMetric, NativeSelect, priorityVariant, statusVariant } from "@/components/app/shared";
 
 const quickUpdateSchema = z.object({
   status: z.string().min(1),
@@ -111,8 +111,8 @@ export function PipelinePage() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <MiniMetric label="Overdue" value={metrics.overdueCount} variant="danger" />
-            <MiniMetric label="Due Today" value={metrics.dueTodayCount} variant="warn" />
-            <MiniMetric label="<= 3 Hari" value={metrics.dueSoonCount} />
+            <MiniMetric label="Due Today" value={metrics.dueTodayCount} variant="orange" />
+            <MiniMetric label="Due Soon" value={metrics.dueSoonCount} variant="warn" />
           </div>
         </CardHeader>
         <CardContent>
@@ -181,7 +181,7 @@ export function PipelinePage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {column.items.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed border-white/10 bg-white/5 p-4 text-sm text-slate-500">
+                <div className="rounded-[18px] border border-dashed border-white/10 bg-white/5 p-4 text-sm text-[#d9c995]/70">
                   Tidak ada prospek.
                 </div>
               ) : (
@@ -261,18 +261,26 @@ function PipelineCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-medium text-white">{item.name}</p>
-          <p className="text-xs text-slate-500">{item.company}</p>
+          <p className="font-medium text-[#fff2a2]">{item.name}</p>
+          <p className="text-xs text-[#d9c995]/70">{item.company}</p>
         </div>
         <Badge variant="info">{item.prospectCode}</Badge>
       </div>
 
-      <div className="mt-4 space-y-2 text-sm text-slate-400">
+      <div className="mt-4 space-y-2 text-sm text-[#d9c995]">
         <p>Owner: {item.owner}</p>
         <p>Akun: {item.accountCategoryLabel}</p>
+        <p>Aging: {item.aging_days} hari di stage</p>
+        <p>Update terakhir: {item.last_activity_diff}</p>
+        {item.follow_up_state === "overdue" ? <p>Overdue {item.overdue_days} hari</p> : null}
         <div className="flex flex-wrap gap-2">
           <Badge variant={statusVariant(item.status)}>{item.statusLabel}</Badge>
-          {item.isOverdue ? <Badge variant="danger">Terlambat</Badge> : null}
+          <Badge variant={followUpVariant(item.follow_up_state)}>
+            {followUpLabel(item.follow_up_state, item.overdue_days)}
+          </Badge>
+          <Badge variant={priorityVariant(item.priority_level)}>{item.priority_level}</Badge>
+          {item.is_stale ? <Badge variant="danger">Stale</Badge> : null}
+          {item.mainObjection ? <Badge variant="warn">{item.mainObjection}</Badge> : null}
           {item.bridgeCandidate ? <Badge variant="warn">Bridge Candidate</Badge> : null}
         </div>
       </div>
@@ -284,7 +292,7 @@ function PipelineCard({
       </div>
 
       {isExpanded ? (
-        <div className="mt-4 space-y-2 text-sm text-slate-400">
+        <div className="mt-4 space-y-2 text-sm text-[#d9c995]">
           <p>Follow Up: {item.nextFollowUpDateLabel}</p>
           <p>GPT: {item.gptModeLabel}</p>
           <p>Suhu: {item.userTemperatureLabel}</p>
@@ -296,7 +304,7 @@ function PipelineCard({
       {item.canEdit && isExpanded ? (
         <form className="mt-4 space-y-3" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
           <select
-            className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none"
+            className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-[#fff2a2] outline-none"
             {...form.register("status")}
           >
             <option className="text-slate-950" value="baru">Baru</option>
@@ -309,13 +317,13 @@ function PipelineCard({
           </select>
           <Input type="date" {...form.register("next_follow_up_date")} />
           <Input placeholder="Apa hasil singkat update ini?" {...form.register("quick_note")} />
-          <select className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none" {...form.register("user_temperature")}>
+          <select className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-[#fff2a2] outline-none" {...form.register("user_temperature")}>
             <option className="text-slate-950" value="">User temperature</option>
             <option className="text-slate-950" value="cold">Cold</option>
             <option className="text-slate-950" value="warm">Warm</option>
             <option className="text-slate-950" value="hot">Hot</option>
           </select>
-          <select className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none" {...form.register("dominant_emotion")}>
+          <select className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-sm text-[#fff2a2] outline-none" {...form.register("dominant_emotion")}>
             <option className="text-slate-950" value="">Emosi dominan</option>
             <option className="text-slate-950" value="takut">Takut</option>
             <option className="text-slate-950" value="ragu">Ragu</option>
@@ -326,7 +334,7 @@ function PipelineCard({
             <option className="text-slate-950" value="netral">Netral</option>
           </select>
           <Input placeholder="Keberatan utama" {...form.register("main_objection")} />
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-[#d9c995]">
             <input type="checkbox" className="h-4 w-4" {...form.register("bridge_candidate")} />
             Bridge candidate
           </label>
@@ -338,7 +346,7 @@ function PipelineCard({
       ) : null}
 
       {isExpanded ? (
-        <a href={item.detailUrl} className="mt-4 inline-flex items-center gap-2 text-sm text-slate-200 hover:text-white">
+        <a href={item.detailUrl} className="mt-4 inline-flex items-center gap-2 text-sm text-[#d9c995] hover:text-[#ffe37b]">
           Detail lengkap
           <ArrowUpRight className="h-4 w-4" />
         </a>
@@ -438,6 +446,8 @@ function PipelineFilters({
 	        options={[
 	          { value: "overdue", label: "Terlambat" },
 	          { value: "today", label: "Hari Ini" },
+	          { value: "soon", label: "Due Soon" },
+	          { value: "stale", label: "Stale Leads" },
 	          { value: "week", label: "7 Hari" },
 	        ]}
 	      />

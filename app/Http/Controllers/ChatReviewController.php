@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ChatReview;
 use App\Models\ManagerReviewNote;
 use App\Models\Prospect;
+use App\Models\ProspectLog;
 use App\Models\User;
 use App\Support\RoleScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,6 +66,9 @@ class ChatReviewController extends Controller
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_company' => ['nullable', 'string', 'max:120'],
             'outcome' => ['required', 'in:'.implode(',', ChatReview::OUTCOMES)],
+            'objection_type' => ['nullable', 'in:'.implode(',', ProspectLog::OBJECTION_TYPES)],
+            'objection_detail' => ['nullable', 'string'],
+            'emotional_state' => ['nullable', 'in:'.implode(',', ProspectLog::EMOTIONAL_STATES)],
             'chat_summary' => ['required', 'string'],
             'chat_excerpt' => ['nullable', 'string'],
             'what_worked' => ['nullable', 'string'],
@@ -131,6 +135,9 @@ class ChatReviewController extends Controller
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_company' => ['nullable', 'string', 'max:120'],
             'outcome' => ['required', 'in:'.implode(',', ChatReview::OUTCOMES)],
+            'objection_type' => ['nullable', 'in:'.implode(',', ProspectLog::OBJECTION_TYPES)],
+            'objection_detail' => ['nullable', 'string'],
+            'emotional_state' => ['nullable', 'in:'.implode(',', ProspectLog::EMOTIONAL_STATES)],
             'status' => ['required', 'in:'.implode(',', ChatReview::STATUSES)],
             'chat_summary' => ['required', 'string'],
             'chat_excerpt' => ['nullable', 'string'],

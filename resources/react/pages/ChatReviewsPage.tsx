@@ -83,14 +83,14 @@ export function ChatReviewsPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         {items.length === 0 ? (
           <Card className="xl:col-span-2">
-            <CardContent className="py-14 text-center text-slate-400">Belum ada review obrolan yang cocok dengan filter ini.</CardContent>
+            <CardContent className="py-14 text-center text-[#d9c995]">Belum ada review obrolan yang cocok dengan filter ini.</CardContent>
           </Card>
         ) : (
           items.map((item) => <ChatReviewCard key={item.id} item={item} />)
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+      <div className="flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
         <span>
           Halaman {meta.currentPage} dari {meta.lastPage}
         </span>
@@ -202,38 +202,40 @@ function ChatReviewCard({
           <div className="flex flex-wrap gap-2">
             <Badge variant="info">{item.accountCategoryLabel}</Badge>
             <Badge variant={item.outcome === "berhasil" ? "success" : item.outcome === "gagal" ? "danger" : "warn"}>{item.outcomeLabel}</Badge>
+            {item.objectionTypeLabel ? <Badge variant="warn">{item.objectionTypeLabel}</Badge> : null}
+            {item.emotionalStateLabel ? <Badge variant="orange">{item.emotionalStateLabel}</Badge> : null}
             <Badge variant="warn">{item.statusLabel}</Badge>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4 text-sm text-slate-300 md:grid-cols-2">
+        <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4 text-sm text-[#d9c995] md:grid-cols-2">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Submitter</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Submitter</p>
             <p className="mt-2">{item.submitter}</p>
-            <p className="text-xs text-slate-500">{item.submitterRole}</p>
+            <p className="text-xs text-[#d9c995]/70">{item.submitterRole}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Statistik</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Statistik</p>
             <p className="mt-2">Catatan manajer: {item.managerNotesCount}</p>
-            <p className="text-xs text-slate-500">Masuk knowledge queue: {item.knowledgeQueueCount}</p>
+            <p className="text-xs text-[#d9c995]/70">Masuk knowledge queue: {item.knowledgeQueueCount}</p>
           </div>
         </div>
 
         <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ringkasan</p>
-          <p className="mt-3 text-sm leading-7 text-slate-300">{item.summary}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Ringkasan</p>
+          <p className="mt-3 text-sm leading-7 text-[#d9c995]">{item.summary}</p>
         </div>
 
         {item.canComment ? (
           <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Catatan Manajer</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Catatan Manajer</p>
             <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto]">
               <NativeSelect value={noteTag} onChange={setNoteTag} placeholder="Tag catatan" options={noteTags} />
               <textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                className="min-h-[44px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                className="min-h-[44px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
                 placeholder="Tambahkan insight, coaching note, atau pola baru."
               />
               <Button disabled={noteMutation.isPending || !note.trim()} onClick={() => noteMutation.mutate()}>
@@ -246,25 +248,25 @@ function ChatReviewCard({
 
         {item.canMarkImportant ? (
           <div className="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Dorong ke Knowledge Queue</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#d9c995]/70">Dorong ke Knowledge Queue</p>
             <div className="grid gap-3 md:grid-cols-2">
               <NativeSelect value={priority} onChange={setPriority} placeholder="Priority" options={queuePriorities} />
               <Input value={problemPattern} onChange={(event) => setProblemPattern(event.target.value)} placeholder="Problem pattern utama" />
               <textarea
                 value={recommendedUpdate}
                 onChange={(event) => setRecommendedUpdate(event.target.value)}
-                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5 md:col-span-2"
+                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5 md:col-span-2"
                 placeholder="Usulan update knowledge / prompt / playbook."
               />
               <textarea
                 value={expectedImpact}
                 onChange={(event) => setExpectedImpact(event.target.value)}
-                className="min-h-[72px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/20 focus:ring-4 focus:ring-white/5 md:col-span-2"
+                className="min-h-[72px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5 md:col-span-2"
                 placeholder="Expected impact opsional."
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <a href={item.showUrl} className="text-sm text-slate-300 underline-offset-4 hover:text-white hover:underline">
+              <a href={item.showUrl} className="text-sm text-[#d9c995] underline-offset-4 hover:text-[#ffe37b] hover:underline">
                 Lihat detail lengkap
               </a>
               <Button
