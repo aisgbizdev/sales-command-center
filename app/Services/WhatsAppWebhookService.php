@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\MessageEvent;
 use App\Models\Prospect;
-use App\Models\WhatsAppConversation;
-use App\Models\WhatsAppMessage;
 use Carbon\Carbon;
 
 class WhatsAppWebhookService
@@ -12,7 +13,6 @@ class WhatsAppWebhookService
     public function handle(array $payload): void
     {
         $entries = $payload['entry'] ?? [];
-
         if (! is_array($entries)) {
             return;
         }
@@ -45,7 +45,7 @@ class WhatsAppWebhookService
 
     private function storeInboundMessages(array $value): void
     {
-        $businessNumber = $this->normalizePhone((string) data_get($value, 'metadata.display_phone_number', ''));
+        $businessPhone = $this->normalizePhone((string) data_get($value, 'metadata.display_phone_number', ''));
         $contactsByWaId = $this->buildContactsIndex($value['contacts'] ?? []);
         $messages = $value['messages'] ?? [];
 
@@ -53,51 +53,75 @@ class WhatsAppWebhookService
             return;
         }
 
-        foreach ($messages as $messagePayload) {
-            if (! is_array($messagePayload)) {
+        foreach ($messages as $payload) {
+            if (! is_array($payload)) {
                 continue;
             }
 
-            $fromNumber = $this->normalizePhone((string) ($messagePayload['from'] ?? ''));
-            if ($fromNumber === '') {
+            $senderPhone = $this->normalizePhone((string) ($payload['from'] ?? ''));
+            if ($senderPhone === '') {
                 continue;
             }
 
-            $contactName = data_get($contactsByWaId, $fromNumber.'.profile.name');
-            $conversation = $this->resolveConversation($fromNumber, $contactName);
-            $messageId = (string) ($messagePayload['id'] ?? '');
-            $sentAt = $this->parseTimestamp($messagePayload['timestamp'] ?? null);
-            $body = $this->extractBody($messagePayload);
-            $messageType = (string) ($messagePayload['type'] ?? 'text');
+            $prospect = $this->findProspectByPhone($senderPhone);
+            if (! $prospect) {
+                continue;
+            }
 
-            $attributes = [
+            $conversation = Conversation::query()->firstOrCreate(
+                [
+                    'prospect_id' => $prospect->id,
+                    'channel' => 'whatsapp',
+                ],
+                [
+                    'assigned_user_id' => $prospect->owner_id,
+                    'status' => 'active',
+                ]
+            );
+
+            $messageType = (string) ($payload['type'] ?? 'text');
+            $content = $this->extractBody($payload);
+            $mediaUrl = $this->extractMediaUrl($payload, $messageType);
+            $waMessageId = (string) ($payload['id'] ?? '');
+            $sentAt = $this->parseTimestamp($payload['timestamp'] ?? null) ?? now();
+
+            $messageAttributes = [
                 'conversation_id' => $conversation->id,
-                'prospect_id' => $conversation->prospect_id,
-                'direction' => WhatsAppMessage::DIRECTION_INBOUND,
+                'direction' => Message::DIRECTION_INCOMING,
                 'message_type' => $messageType,
-                'from_number' => $fromNumber,
-                'to_number' => $businessNumber ?: null,
-                'body' => $body,
+                'sender_phone' => $senderPhone,
+                'receiver_phone' => $businessPhone !== '' ? $businessPhone : null,
+                'content' => $content,
+                'media_url' => $mediaUrl,
                 'status' => 'received',
                 'sent_at' => $sentAt,
-                'raw_payload' => $messagePayload,
             ];
 
-            if ($messageId !== '') {
-                $attributes['wa_message_id'] = $messageId;
-                WhatsAppMessage::query()->updateOrCreate(
-                    ['wa_message_id' => $messageId],
-                    $attributes
-                );
-            } else {
-                WhatsAppMessage::query()->create($attributes);
-            }
+            $message = $waMessageId !== ''
+                ? Message::query()->updateOrCreate(['wa_message_id' => $waMessageId], $messageAttributes)
+                : Message::query()->create($messageAttributes);
+
+            MessageEvent::query()->create([
+                'message_id' => $message->id,
+                'event_type' => 'incoming',
+                'payload' => $payload,
+            ]);
 
             $conversation->forceFill([
                 'last_message_at' => $this->maxTimestamp($conversation->last_message_at, $sentAt) ?? now(),
-                'last_inbound_at' => $this->maxTimestamp($conversation->last_inbound_at, $sentAt) ?? now(),
-                'unread_for_owner' => $conversation->unread_for_owner + 1,
+                'last_message_preview' => $this->preview($content, $messageType),
+                'unread_count' => $conversation->unread_count + 1,
+                'assigned_user_id' => $conversation->assigned_user_id ?: $prospect->owner_id,
             ])->save();
+
+            $prospect->updateQuietly([
+                'last_activity_at' => now(),
+                'last_contact_at' => $sentAt,
+            ]);
+
+            if (($contactsByWaId[$senderPhone]['profile']['name'] ?? null) && ! $prospect->company) {
+                $prospect->updateQuietly(['company' => $contactsByWaId[$senderPhone]['profile']['name']]);
+            }
         }
     }
 
@@ -113,86 +137,56 @@ class WhatsAppWebhookService
                 continue;
             }
 
-            $messageId = (string) ($statusPayload['id'] ?? '');
-            if ($messageId === '') {
+            $waMessageId = (string) ($statusPayload['id'] ?? '');
+            if ($waMessageId === '') {
                 continue;
             }
 
-            $message = WhatsAppMessage::query()->where('wa_message_id', $messageId)->first();
+            $message = Message::query()->where('wa_message_id', $waMessageId)->first();
             if (! $message) {
                 continue;
             }
 
             $status = (string) ($statusPayload['status'] ?? '');
-            $statusAt = $this->parseTimestamp($statusPayload['timestamp'] ?? null);
+            $eventAt = $this->parseTimestamp($statusPayload['timestamp'] ?? null);
 
             $updates = [
-                'status' => $status ?: $message->status,
-                'raw_payload' => $statusPayload,
+                'status' => $status !== '' ? $status : $message->status,
             ];
 
             if ($status === 'sent') {
-                $updates['sent_at'] = $statusAt ?? $message->sent_at;
+                $updates['sent_at'] = $eventAt ?? $message->sent_at;
             }
 
             if ($status === 'delivered') {
-                $updates['delivered_at'] = $statusAt ?? $message->delivered_at;
+                $updates['delivered_at'] = $eventAt ?? $message->delivered_at;
             }
 
             if ($status === 'read') {
-                $updates['read_at'] = $statusAt ?? $message->read_at;
-            }
-
-            if ($status === 'failed') {
-                $updates['failed_at'] = $statusAt ?? $message->failed_at;
+                $updates['read_at'] = $eventAt ?? $message->read_at;
             }
 
             $message->fill($updates)->save();
 
-            $conversation = $message->conversation;
-            if (! $conversation) {
-                continue;
-            }
+            MessageEvent::query()->create([
+                'message_id' => $message->id,
+                'event_type' => $status !== '' ? $status : 'status_update',
+                'payload' => $statusPayload,
+            ]);
 
-            $nextLastMessageAt = $this->maxTimestamp($conversation->last_message_at, $statusAt);
-            if ($nextLastMessageAt) {
+            $conversation = $message->conversation;
+            if ($conversation && $eventAt) {
                 $conversation->forceFill([
-                    'last_message_at' => $nextLastMessageAt,
+                    'last_message_at' => $this->maxTimestamp($conversation->last_message_at, $eventAt),
                 ])->save();
             }
         }
     }
 
-    private function resolveConversation(string $fromNumber, ?string $contactName): WhatsAppConversation
-    {
-        $conversation = WhatsAppConversation::query()->firstOrNew([
-            'wa_chat_id' => $fromNumber,
-        ]);
-
-        if (! $conversation->prospect_phone) {
-            $conversation->prospect_phone = $fromNumber;
-        }
-
-        if (! $conversation->contact_name && filled($contactName)) {
-            $conversation->contact_name = $contactName;
-        }
-
-        if (! $conversation->prospect_id) {
-            $prospect = $this->findProspectByPhone($fromNumber);
-            if ($prospect) {
-                $conversation->prospect_id = $prospect->id;
-                $conversation->owner_id = $prospect->owner_id;
-            }
-        }
-
-        $conversation->save();
-
-        return $conversation;
-    }
-
     private function findProspectByPhone(string $phone): ?Prospect
     {
         $variants = $this->phoneVariants($phone);
+
         if ($variants === []) {
             return null;
         }
@@ -216,78 +210,49 @@ class WhatsAppWebhookService
             ->filter(fn ($item) => is_array($item))
             ->mapWithKeys(function (array $item) {
                 $waId = $this->normalizePhone((string) ($item['wa_id'] ?? ''));
-                if ($waId === '') {
-                    return [];
-                }
 
-                return [$waId => $item];
+                return $waId !== '' ? [$waId => $item] : [];
             })
             ->all();
     }
 
-    private function phoneVariants(string $phone): array
+    private function extractBody(array $payload): ?string
     {
-        $digits = $this->normalizePhone($phone);
-        if ($digits === '') {
-            return [];
-        }
+        $type = (string) ($payload['type'] ?? 'text');
 
-        $variants = [$digits];
-
-        if (str_starts_with($digits, '0')) {
-            $variants[] = '62'.substr($digits, 1);
-        }
-
-        if (str_starts_with($digits, '62')) {
-            $variants[] = '0'.substr($digits, 2);
-        }
-
-        if (str_starts_with($digits, '8')) {
-            $variants[] = '0'.$digits;
-            $variants[] = '62'.$digits;
-        }
-
-        return array_values(array_unique(array_filter($variants)));
+        return match ($type) {
+            'text' => data_get($payload, 'text.body'),
+            'button' => data_get($payload, 'button.text'),
+            'interactive' => data_get($payload, 'interactive.button_reply.title')
+                ?: trim(implode(' - ', array_filter([
+                    data_get($payload, 'interactive.list_reply.title'),
+                    data_get($payload, 'interactive.list_reply.description'),
+                ]))),
+            'image', 'video', 'document' => data_get($payload, $type.'.caption') ?: strtoupper($type).' message',
+            'audio' => 'AUDIO message',
+            'sticker' => 'STICKER message',
+            default => strtoupper($type).' message',
+        };
     }
 
-    private function normalizePhone(string $value): string
+    private function extractMediaUrl(array $payload, string $type): ?string
     {
-        return preg_replace('/\D+/', '', $value) ?? '';
+        if (! in_array($type, ['image', 'video', 'document', 'audio', 'sticker'], true)) {
+            return null;
+        }
+
+        return data_get($payload, $type.'.id') ?: data_get($payload, $type.'.link');
     }
 
-    private function extractBody(array $messagePayload): ?string
+    private function preview(?string $content, string $type): string
     {
-        $type = (string) ($messagePayload['type'] ?? 'text');
+        $text = trim((string) $content);
 
-        if ($type === 'text') {
-            return data_get($messagePayload, 'text.body');
+        if ($text === '') {
+            $text = strtoupper($type).' message';
         }
 
-        if ($type === 'button') {
-            return data_get($messagePayload, 'button.text');
-        }
-
-        if ($type === 'interactive') {
-            $replyTitle = data_get($messagePayload, 'interactive.button_reply.title');
-            $listTitle = data_get($messagePayload, 'interactive.list_reply.title');
-            $listDescription = data_get($messagePayload, 'interactive.list_reply.description');
-
-            return $replyTitle ?: trim(implode(' - ', array_filter([$listTitle, $listDescription])));
-        }
-
-        if (in_array($type, ['image', 'video', 'document'], true)) {
-            return data_get($messagePayload, $type.'.caption') ?: strtoupper($type).' message';
-        }
-
-        if ($type === 'audio') {
-            return 'AUDIO message';
-        }
-
-        if ($type === 'sticker') {
-            return 'STICKER message';
-        }
-
-        return strtoupper($type).' message';
+        return mb_substr($text, 0, 255);
     }
 
     private function parseTimestamp(mixed $value): ?Carbon
@@ -318,5 +283,36 @@ class WhatsAppWebhookService
         }
 
         return $left->greaterThan($right) ? $left : $right;
+    }
+
+    private function normalizePhone(string $value): string
+    {
+        return preg_replace('/\D+/', '', $value) ?? '';
+    }
+
+    private function phoneVariants(string $phone): array
+    {
+        $digits = $this->normalizePhone($phone);
+
+        if ($digits === '') {
+            return [];
+        }
+
+        $variants = [$digits];
+
+        if (str_starts_with($digits, '0')) {
+            $variants[] = '62'.substr($digits, 1);
+        }
+
+        if (str_starts_with($digits, '62')) {
+            $variants[] = '0'.substr($digits, 2);
+        }
+
+        if (str_starts_with($digits, '8')) {
+            $variants[] = '0'.$digits;
+            $variants[] = '62'.$digits;
+        }
+
+        return array_values(array_unique(array_filter($variants)));
     }
 }

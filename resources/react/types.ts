@@ -513,6 +513,38 @@ export type ProspectDetailResponse = {
   emotionalStates: Option[];
 };
 
+export type ConversationResponse = {
+  conversation: {
+    id: number;
+    channel: string;
+    status: string;
+    unreadCount: number;
+    lastMessageAt: string | null;
+    lastMessagePreview: string | null;
+    assignedUserId: string | null;
+  } | null;
+  messages: {
+    id: number;
+    waMessageId: string | null;
+    direction: "incoming" | "outgoing";
+    messageType: string;
+    senderPhone: string | null;
+    receiverPhone: string | null;
+    content: string | null;
+    mediaUrl: string | null;
+    status: string | null;
+    errorMessage?: string | null;
+    sentAt: string | null;
+    deliveredAt: string | null;
+    readAt: string | null;
+  }[];
+  prospect: {
+    id: number;
+    name: string;
+    phone: string | null;
+  };
+};
+
 export type ProspectFormResponse = {
   sources: Option[];
   statuses: Option[];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\WhatsAppWebhookEvent;
 use App\Services\WhatsAppWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -9,66 +10,43 @@ use Illuminate\Support\Facades\Log;
 class WhatsAppWebhookController extends Controller
 {
     public function __construct(
-        private readonly WhatsAppWebhookService $service
+        private readonly WhatsAppWebhookService $webhookService
     ) {
     }
 
-    public function verify(Request $request)
+    public function handle(Request $request)
     {
-        $mode = $request->query('hub_mode', $request->query('hub.mode'));
-        $verifyToken = $request->query('hub_verify_token', $request->query('hub.verify_token'));
-        $challenge = $request->query('hub_challenge', $request->query('hub.challenge', ''));
+        $mode = $request->query('hub_mode');
+        $token = $request->query('hub_verify_token');
+        $challenge = $request->query('hub_challenge');
 
         if (
-            $mode === 'subscribe' &&
-            $verifyToken !== '' &&
-            hash_equals((string) config('services.whatsapp.verify_token'), $verifyToken)
+            $mode === 'subscribe'
+            && $token === config('services.whatsapp.verify_token')
         ) {
+            Log::info('WHATSAPP VERIFIED');
+
             return response($challenge, 200)->header('Content-Type', 'text/plain');
         }
 
-        return response('Forbidden', 403);
-    }
+        $payload = $request->all();
+        Log::info('WHATSAPP_WEBHOOK', $payload);
 
-    public function receive(Request $request)
-    {
-        if (! $this->hasValidSignature($request)) {
-            return response()->json([
-                'message' => 'Invalid signature.',
-            ], 401);
-        }
+        WhatsAppWebhookEvent::query()->create([
+            'payload' => $payload,
+            'event_type' => data_get($payload, 'entry.0.changes.0.field'),
+        ]);
 
         try {
-            $this->service->handle($request->all());
+            $this->webhookService->handle($payload);
         } catch (\Throwable $e) {
-            Log::error('WhatsApp webhook processing failed', [
+            Log::error('WHATSAPP_WEBHOOK_PROCESSING_FAILED', [
                 'error' => $e->getMessage(),
             ]);
-
-            return response()->json([
-                'message' => 'Webhook processing failed.',
-            ], 500);
         }
 
         return response()->json([
-            'message' => 'EVENT_RECEIVED',
+            'success' => true,
         ]);
-    }
-
-    private function hasValidSignature(Request $request): bool
-    {
-        $appSecret = (string) config('services.whatsapp.app_secret');
-        if ($appSecret === '') {
-            return true;
-        }
-
-        $signature = (string) $request->header('X-Hub-Signature-256', '');
-        if ($signature === '') {
-            return false;
-        }
-
-        $expected = 'sha256='.hash_hmac('sha256', $request->getContent(), $appSecret);
-
-        return hash_equals($expected, $signature);
     }
 }

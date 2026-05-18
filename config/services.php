@@ -36,10 +36,13 @@ return [
     ],
 
     'whatsapp' => [
+        'base_url' => env('WHATSAPP_BASE_URL', 'https://graph.facebook.com'),
+        'token' => env('WHATSAPP_TOKEN'),
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
         'app_secret' => env('WHATSAPP_APP_SECRET'),
-        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN', env('WHATSAPP_TOKEN')),
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'business_phone' => env('WHATSAPP_BUSINESS_PHONE'),
         'api_version' => env('WHATSAPP_API_VERSION', 'v22.0'),
     ],
 

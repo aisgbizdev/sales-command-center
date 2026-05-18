@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ChatReviewController;
+use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\KnowledgeUpdateQueueController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\ReactApiController;
@@ -12,8 +13,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('webhooks.whatsapp.verify');
-Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('webhooks.whatsapp.receive');
+Route::match(['GET', 'POST'], '/webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle'])->name('webhooks.whatsapp.handle');
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/prospects/form', [ReactApiController::class, 'prospectForm'])->name('react-api.prospects.form');
         Route::get('/prospects/{prospect}', [ReactApiController::class, 'prospectDetail'])->name('react-api.prospects.show');
         Route::post('/prospects/{prospect}/logs', [ReactApiController::class, 'storeProspectLog'])->name('react-api.prospects.logs.store');
+        Route::get('/conversations/{prospect}', [ConversationController::class, 'show'])->name('react-api.conversations.show');
+        Route::post('/conversations/{prospect}/send', [ConversationController::class, 'send'])->name('react-api.conversations.send');
         Route::get('/pipeline', [ReactApiController::class, 'pipeline'])->name('react-api.pipeline');
         Route::get('/performance', [ReactApiController::class, 'performance'])->name('react-api.performance');
         Route::get('/objection-insights', [ReactApiController::class, 'objectionInsights'])->name('react-api.objection-insights');

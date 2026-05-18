@@ -10,7 +10,7 @@
     @endif
 </head>
 <body>
-    <main class="auth">
+    <main class="auth" style="--auth-bg-image: url('{{ asset('brand/background.png') }}?v=20260518-login');">
         <section class="card">
             <div class="hero-copy">
                 <img src="{{ asset('brand/Logo SG-WEB111.png') }}" alt="{{ config('app.name') }}" class="brand-lockup">

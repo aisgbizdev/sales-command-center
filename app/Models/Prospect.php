@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Prospect extends Model
@@ -289,6 +290,11 @@ class Prospect extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(ProspectLog::class);
+    }
+
+    public function conversation(): HasOne
+    {
+        return $this->hasOne(Conversation::class)->where('channel', 'whatsapp');
     }
 
     public function whatsAppConversations(): HasMany

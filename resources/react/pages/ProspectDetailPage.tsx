@@ -4,7 +4,7 @@ import { Pencil, Save } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-import type { ProspectDetailResponse } from "@/types";
+import type { ConversationResponse, ProspectDetailResponse } from "@/types";
 import { fetchJson, sendJson } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,11 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
   const detail = useQuery({
     queryKey: ["prospect", id],
     queryFn: () => fetchJson<ProspectDetailResponse>(`/react-api/prospects/${id}`),
+  });
+  const conversation = useQuery({
+    queryKey: ["conversation", id],
+    queryFn: () => fetchJson<ConversationResponse>(`/react-api/conversations/${id}`),
+    refetchInterval: 10000,
   });
 
   const [dailyActivityType, setDailyActivityType] = React.useState("");
@@ -65,6 +70,41 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
       await queryClient.invalidateQueries({ queryKey: ["performance"] });
     },
     onError: () => toast.error("Gagal menyimpan input harian."),
+  });
+  const [messageType, setMessageType] = React.useState<"text" | "image" | "template">("text");
+  const [messageText, setMessageText] = React.useState("");
+  const [imageUrl, setImageUrl] = React.useState("");
+  const [imageCaption, setImageCaption] = React.useState("");
+  const [templateName, setTemplateName] = React.useState("");
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async () => {
+      const payload =
+        messageType === "text"
+          ? { type: "text", text: messageText }
+          : messageType === "image"
+            ? { type: "image", image_url: imageUrl, caption: imageCaption || null }
+            : { type: "template", template_name: templateName, template_language: "id" };
+
+      return sendJson<{ message: string }>(`/react-api/conversations/${id}/send`, payload);
+    },
+    onSuccess: async (data) => {
+      toast.success(data.message || "Pesan terkirim.");
+      setMessageText("");
+      setImageUrl("");
+      setImageCaption("");
+      setTemplateName("");
+      await queryClient.invalidateQueries({ queryKey: ["conversation", id] });
+      await queryClient.invalidateQueries({ queryKey: ["prospect", id] });
+      await queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      await queryClient.invalidateQueries({ queryKey: ["performance"] });
+    },
+    onError: async () => {
+      toast.error("Gagal kirim pesan.");
+      await queryClient.invalidateQueries({ queryKey: ["conversation", id] });
+    },
   });
 
   if (detail.isLoading) return <LoadingState label="Memuat detail prospek..." />;
@@ -228,6 +268,121 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Conversation WhatsApp</CardTitle>
+          <CardDescription>Layer percakapan terpusat per prospek untuk operasional follow up sales.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[1.8fr_minmax(320px,1fr)]">
+          <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">History Message</p>
+              <span className="rounded-full border border-[#f7c744]/30 bg-[#f7c744]/12 px-3 py-1 text-xs text-[#ffe37b]">
+                Unread {conversation.data?.conversation?.unreadCount ?? 0}
+              </span>
+            </div>
+            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+              {conversation.isLoading ? (
+                <p className="text-sm text-[#d9c995]/70">Memuat conversation...</p>
+              ) : (conversation.data?.messages.length ?? 0) === 0 ? (
+                <p className="text-sm text-[#d9c995]/70">Belum ada message untuk prospek ini.</p>
+              ) : (
+                conversation.data?.messages.map((item) => (
+                  <div key={item.id} className={`flex ${item.direction === "outgoing" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl border px-4 py-3 text-sm ${
+                        item.direction === "outgoing"
+                          ? "border-[#f7c744]/35 bg-[#f7c744]/18 text-[#fff2a2]"
+                          : "border-white/10 bg-white/6 text-[#d9c995]"
+                      }`}
+                    >
+                      {item.content ? <p className="whitespace-pre-wrap">{item.content}</p> : null}
+                      {item.mediaUrl ? (
+                        <a className="mt-2 block text-xs text-[#ffe37b] underline" href={item.mediaUrl} target="_blank" rel="noreferrer">
+                          Lihat media
+                        </a>
+                      ) : null}
+                      <p className="mt-2 text-[11px] text-[#d9c995]/70">
+                        {item.sentAt ? new Date(item.sentAt).toLocaleString("id-ID") : "-"} | {item.status ?? "-"}
+                      </p>
+                      {item.errorMessage ? <p className="mt-1 text-[11px] text-red-300">{item.errorMessage}</p> : null}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Kirim Pesan</p>
+            <div className="mt-3 grid gap-3">
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Tipe Pesan
+                <select
+                  value={messageType}
+                  onChange={(event) => setMessageType(event.target.value as "text" | "image" | "template")}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                >
+                  <option value="text">Text</option>
+                  <option value="image">Image</option>
+                  <option value="template">Template</option>
+                </select>
+              </label>
+              {messageType === "text" ? (
+                <label className="grid gap-2 text-sm text-[#d9c995]">
+                  Message
+                  <textarea
+                    value={messageText}
+                    onChange={(event) => setMessageText(event.target.value)}
+                    className="min-h-[120px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                    placeholder="Ketik balasan ke prospect..."
+                  />
+                </label>
+              ) : null}
+              {messageType === "image" ? (
+                <>
+                  <label className="grid gap-2 text-sm text-[#d9c995]">
+                    Image URL
+                    <input
+                      value={imageUrl}
+                      onChange={(event) => setImageUrl(event.target.value)}
+                      className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                      placeholder="https://..."
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm text-[#d9c995]">
+                    Caption
+                    <input
+                      value={imageCaption}
+                      onChange={(event) => setImageCaption(event.target.value)}
+                      className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                      placeholder="Opsional"
+                    />
+                  </label>
+                </>
+              ) : null}
+              {messageType === "template" ? (
+                <label className="grid gap-2 text-sm text-[#d9c995]">
+                  Template Name
+                  <input
+                    value={templateName}
+                    onChange={(event) => setTemplateName(event.target.value)}
+                    className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                    placeholder="nama_template_meta"
+                  />
+                </label>
+              ) : null}
+              <Button
+                type="button"
+                disabled={sendMessageMutation.isPending}
+                onClick={() => sendMessageMutation.mutate()}
+              >
+                Kirim Pesan
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
