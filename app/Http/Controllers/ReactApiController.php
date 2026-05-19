@@ -822,6 +822,7 @@ class ReactApiController extends Controller
                 ['label' => 'Dashboard', 'href' => '/dashboard'],
                 ['label' => 'Prospek', 'href' => '/prospects'],
                 ['label' => 'Pipeline', 'href' => '/pipeline'],
+                ['label' => 'WA WebView', 'href' => '/wa-webview'],
                 ...($user->can('access-performance') ? [['label' => 'Command Center', 'href' => '/manager-insights']] : []),
                 ...($user->can('access-performance') ? [['label' => 'Kinerja', 'href' => '/kinerja-penjualan']] : []),
                 ...($user->can('access-chat-reviews') ? [['label' => 'Tinjauan Obrolan', 'href' => '/chat-reviews']] : []),

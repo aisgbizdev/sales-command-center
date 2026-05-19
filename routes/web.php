@@ -9,6 +9,7 @@ use App\Http\Controllers\ReactApiController;
 use App\Http\Controllers\ReactAppController;
 use App\Http\Controllers\UserMasterDataController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\WhatsAppWebJsController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +46,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat-reviews/{chatReview}/edit', ReactAppController::class)->name('chat-reviews.edit');
     Route::get('/knowledge-queue', ReactAppController::class)->name('knowledge-queue.index');
     Route::get('/users', ReactAppController::class)->name('users.index');
+    Route::get('/wa-webview', [WhatsAppWebJsController::class, 'index'])->name('wa-webview.index');
+    Route::match(['GET', 'POST'], '/wa-webjs-api/{path?}', [WhatsAppWebJsController::class, 'proxy'])
+        ->where('path', '.*')
+        ->name('wa-webview.proxy');
     Route::get('/react/{path?}', function () {
         return redirect()->route('dashboard');
     })->where('path', '.*');

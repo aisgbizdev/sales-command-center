@@ -9,7 +9,26 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="icon" type="image/png" href="{{ asset('brand/Logo SG-WEB111.png') }}">
 
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+    @php
+        $isWaWebView = request()->routeIs('wa-webview.*');
+        $manifestPath = public_path('build/manifest.json');
+    @endphp
+
+    @if (file_exists($manifestPath))
+        @php
+            $manifest = json_decode(file_get_contents($manifestPath), true) ?: [];
+            $cssEntry = $manifest['resources/css/app.css']['file'] ?? null;
+            $jsEntry = $manifest['resources/js/app.js']['file'] ?? null;
+        @endphp
+
+        @if ($cssEntry)
+            <link rel="stylesheet" href="{{ asset('build/' . $cssEntry) }}">
+        @endif
+
+        @if ($jsEntry)
+            <script type="module" src="{{ asset('build/' . $jsEntry) }}"></script>
+        @endif
+    @elseif (file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 </head>
@@ -83,6 +102,17 @@
                         </svg>
                     </span>
                     <span x-show="sidebarExpand">Pipeline</span>
+                </a>
+
+                <a href="{{ route('wa-webview.index') }}"
+                    class="menu-item group {{ request()->routeIs('wa-webview.*') ? 'menu-item-active' : 'menu-item-inactive' }}"
+                    :class="{ 'xl:justify-center': !sidebarExpand }">
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M12 3a8.5 8.5 0 0 0-7.37 12.75L4 21l5.35-1.4A8.5 8.5 0 1 0 12 3Zm0 15.2a6.67 6.67 0 0 1-3.4-.92l-.24-.14-3.17.83.85-3.09-.16-.25A6.7 6.7 0 1 1 12 18.2Zm3.67-4.98c-.2-.1-1.2-.6-1.38-.67-.19-.07-.33-.1-.47.1-.14.2-.54.67-.66.8-.12.13-.24.15-.44.05-.2-.1-.86-.32-1.63-1.03-.6-.53-1-1.2-1.12-1.4-.12-.2-.01-.31.08-.4.09-.08.2-.21.3-.31.1-.1.14-.17.2-.29.07-.12.04-.22-.02-.31-.05-.1-.47-1.14-.64-1.56-.17-.41-.34-.35-.47-.35h-.4c-.14 0-.36.05-.54.25-.19.2-.72.7-.72 1.71 0 1 .74 1.98.84 2.12.1.13 1.45 2.22 3.5 3.11.49.21.87.34 1.17.44.49.15.94.13 1.3.08.4-.06 1.2-.49 1.36-.97.17-.48.17-.88.12-.97-.05-.1-.18-.15-.38-.25Z" fill="currentColor"/>
+                        </svg>
+                    </span>
+                    <span x-show="sidebarExpand">WA WebView</span>
                 </a>
 
                 @can('access-performance')

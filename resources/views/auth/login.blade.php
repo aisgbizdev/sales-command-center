@@ -5,7 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - {{ config('app.name') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('brand/Logo SG-WEB111.png') }}">
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+    @if (file_exists(public_path('build/manifest.json')))
+        @php
+            $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true) ?: [];
+            $cssEntry = $manifest['resources/css/app.css']['file'] ?? null;
+            $jsEntry = $manifest['resources/js/app.js']['file'] ?? null;
+        @endphp
+        @if ($cssEntry)
+            <link rel="stylesheet" href="{{ asset('build/' . $cssEntry) }}">
+        @endif
+        @if ($jsEntry)
+            <script type="module" src="{{ asset('build/' . $jsEntry) }}"></script>
+        @endif
+    @elseif (file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 </head>
