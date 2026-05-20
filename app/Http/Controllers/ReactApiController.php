@@ -56,6 +56,7 @@ class ReactApiController extends Controller
 
         $prospect->load([
             'owner:id,name',
+            'latestAiInsight',
             'logs' => fn ($q) => $q->with('user:id,name')->latest('log_date'),
         ]);
 
@@ -88,6 +89,7 @@ class ReactApiController extends Controller
                 'estimationValueLabel' => 'Rp ' . number_format((float) ($prospect->estimation_value ?? 0), 0, ',', '.'),
                 'notes' => $prospect->notes,
                 ...$this->prospectOperationalFields($prospect),
+                'aiInsight' => $this->leadInsightPayload($prospect),
             ],
             'logs' => $prospect->logs->map(fn (ProspectLog $log) => [
                 'id' => $log->id,
@@ -502,7 +504,7 @@ class ReactApiController extends Controller
         $offset = ($page - 1) * $perPage;
 
         $queue = LeadOperationalSnapshot::query()
-            ->with(['lead.owner:id,name', 'queueState'])
+            ->with(['lead.owner:id,name', 'lead.latestAiInsight', 'queueState'])
             ->whereIn('lead_id', $leadIds)
             ->when($request->string('priority_band')->toString(), fn (Builder $q, string $band) => $q->where('priority_band', $band))
             ->when($request->boolean('ghost_risk'), fn (Builder $q) => $q->where('ghost_risk_score', '>=', 70))
@@ -548,6 +550,7 @@ class ReactApiController extends Controller
                     'nextActionExpiresAtLabel' => $snapshot->next_action_expires_at?->format('d M H:i'),
                     'computedAtLabel' => $snapshot->computed_at?->format('d M H:i:s'),
                     'lifecycleState' => $snapshot->queueState?->state ?? 'active',
+                    'aiInsight' => $this->leadInsightPayload($lead),
                     'detailUrl' => route('prospects.show', $lead),
                 ];
             })->filter()->values(),
@@ -672,6 +675,20 @@ class ReactApiController extends Controller
                 'actedAtLabel' => $item->acted_at?->format('d M Y H:i:s'),
                 'actedByUserId' => $item->acted_by_user_id,
             ])->values(),
+        ]);
+    }
+
+    public function leadInsight(Request $request, Prospect $prospect): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+        $prospect->load('latestAiInsight');
+
+        return response()->json([
+            'lead_id' => $prospect->id,
+            'stale' => $this->isInsightStale($prospect),
+            'insight' => $this->leadInsightPayload($prospect),
         ]);
     }
 
@@ -1204,6 +1221,44 @@ class ReactApiController extends Controller
             'qualify_next_step' => 'Kualifikasi langkah berikutnya',
             default => 'Review manual',
         };
+    }
+
+    private function leadInsightPayload(Prospect $lead): ?array
+    {
+        $insight = $lead->latestAiInsight;
+        if (! $insight) {
+            return null;
+        }
+
+        $nextAction = is_array($insight->next_best_actions) ? ($insight->next_best_actions[0] ?? null) : null;
+        $ghostRisk = is_array($insight->risk_flags) ? ($insight->risk_flags['ghost_risk_ai'] ?? null) : null;
+
+        return [
+            'leadScore' => $insight->lead_score,
+            'temperature' => $insight->temperature,
+            'dominantEmotion' => $insight->dominant_emotion,
+            'topObjection' => is_array($insight->top_objections) ? ($insight->top_objections[0] ?? null) : null,
+            'ghostRisk' => $ghostRisk,
+            'nextActionCode' => is_array($nextAction) ? ($nextAction['code'] ?? null) : null,
+            'nextActionText' => is_array($nextAction) ? ($nextAction['text'] ?? null) : null,
+            'confidence' => $insight->confidence !== null ? (float) $insight->confidence : null,
+            'generatedAtLabel' => $insight->generated_at?->format('d M H:i:s'),
+            'expiresAtLabel' => $insight->expires_at?->format('d M H:i:s'),
+        ];
+    }
+
+    private function isInsightStale(Prospect $lead): bool
+    {
+        $insight = $lead->latestAiInsight;
+        if (! $insight) {
+            return true;
+        }
+
+        if (! $insight->expires_at) {
+            return false;
+        }
+
+        return $insight->expires_at->lt(now());
     }
 
     private function isSnapshotVisibleInQueue(LeadOperationalSnapshot $snapshot): bool

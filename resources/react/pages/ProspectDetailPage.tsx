@@ -132,6 +132,44 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
         </CardContent>
       </Card>
 
+      {prospect.aiInsight ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Advisory (Clara)</CardTitle>
+            <CardDescription>Insight ini hanya rekomendasi. Keputusan workflow tetap di user/SCC.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Lead Score AI</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.aiInsight.leadScore ?? "-"}</p>
+            </div>
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Temperature AI</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.aiInsight.temperature ?? "-"}</p>
+            </div>
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Ghost Risk AI</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{prospect.aiInsight.ghostRisk ?? "-"}</p>
+            </div>
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Confidence</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
+                {prospect.aiInsight.confidence !== undefined && prospect.aiInsight.confidence !== null
+                  ? `${Math.round(prospect.aiInsight.confidence * 100)}%`
+                  : "-"}
+              </p>
+            </div>
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4 md:col-span-2 xl:col-span-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#d9c995]/70">Next Recommendation</p>
+              <p className="mt-2 text-sm text-[#fff2a2]">{prospect.aiInsight.nextActionText ?? "-"}</p>
+              <p className="mt-2 text-xs text-[#d9c995]/70">
+                Generated: {prospect.aiInsight.generatedAtLabel ?? "-"} · Expires: {prospect.aiInsight.expiresAtLabel ?? "-"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {detail.data.canEdit ? (
         <Card>
           <CardHeader>

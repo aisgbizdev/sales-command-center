@@ -312,6 +312,11 @@ class Prospect extends Model
         return $this->hasMany(LeadAiInsight::class, 'lead_id');
     }
 
+    public function latestAiInsight(): HasOne
+    {
+        return $this->hasOne(LeadAiInsight::class, 'lead_id')->latestOfMany('generated_at');
+    }
+
     public function operationalSnapshot(): HasOne
     {
         return $this->hasOne(LeadOperationalSnapshot::class, 'lead_id');

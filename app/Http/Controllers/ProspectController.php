@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Prospect;
 use App\Models\ProspectLog;
+use App\Services\ClaraIntegrationService;
 use App\Services\LeadOperationalSnapshotService;
 use App\Models\User;
 use App\Services\LeadTimelineService;
@@ -15,7 +16,8 @@ class ProspectController extends Controller
 {
     public function __construct(
         private readonly LeadTimelineService $timeline,
-        private readonly LeadOperationalSnapshotService $snapshotService
+        private readonly LeadOperationalSnapshotService $snapshotService,
+        private readonly ClaraIntegrationService $clara
     ) {
     }
 
@@ -281,12 +283,24 @@ class ProspectController extends Controller
 
         if ($request->expectsJson()) {
             $this->snapshotService->recomputeLead($prospect->fresh());
+            if ($previousStatus !== $prospect->status) {
+                $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'status_changed');
+            }
+            if ($prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_OVERDUE) {
+                $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'followup_overdue');
+            }
             return response()->json([
                 'message' => 'Prospek berhasil diperbarui cepat.',
             ]);
         }
 
         $this->snapshotService->recomputeLead($prospect->fresh());
+        if ($previousStatus !== $prospect->status) {
+            $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'status_changed');
+        }
+        if ($prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_OVERDUE) {
+            $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'followup_overdue');
+        }
 
         return back()->with('status', 'Prospek berhasil diperbarui cepat.');
     }
@@ -363,6 +377,7 @@ class ProspectController extends Controller
 
         $this->saveDailyLogIfExists($validated, $prospect, $user);
         $this->snapshotService->recomputeLead($prospect->fresh());
+        $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'lead_created');
 
         return redirect()->route('prospects.index')->with('status', 'Prospek berhasil ditambahkan.');
     }
@@ -478,6 +493,12 @@ class ProspectController extends Controller
 
         $this->saveDailyLogIfExists($validated, $prospect, $user);
         $this->snapshotService->recomputeLead($prospect->fresh());
+        if ($previousStatus !== $prospect->status) {
+            $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'status_changed');
+        }
+        if ($prospect->follow_up_state === Prospect::FOLLOW_UP_STATE_OVERDUE) {
+            $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'followup_overdue');
+        }
 
         return redirect()->route('prospects.show', $prospect)->with('status', 'Prospek berhasil diperbarui.');
     }
@@ -555,6 +576,7 @@ class ProspectController extends Controller
         );
 
         $this->snapshotService->recomputeLead($prospect->fresh());
+        $this->clara->enqueueLeadAnalysis($prospect->fresh(), 'message_received');
     }
 
     private function applyFilters(Builder $query, Request $request): Builder

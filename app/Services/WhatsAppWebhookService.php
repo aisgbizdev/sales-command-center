@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Prospect;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppMessage;
+use App\Services\ClaraIntegrationService;
 use App\Services\LeadTimelineService;
 use Carbon\Carbon;
 
@@ -12,7 +13,8 @@ class WhatsAppWebhookService
 {
     public function __construct(
         private readonly LeadTimelineService $timeline,
-        private readonly LeadOperationalSnapshotService $snapshotService
+        private readonly LeadOperationalSnapshotService $snapshotService,
+        private readonly ClaraIntegrationService $clara
     ) {
     }
 
@@ -110,6 +112,7 @@ class WhatsAppWebhookService
                 $lead = Prospect::query()->find($conversation->prospect_id);
                 if ($lead) {
                     $this->snapshotService->recomputeLead($lead);
+                    $this->clara->enqueueLeadAnalysis($lead, 'message_received');
                 }
 
                 $this->timeline->record(

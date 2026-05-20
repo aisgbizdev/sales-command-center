@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ChatReviewController;
+use App\Http\Controllers\ClaraCallbackController;
+use App\Http\Controllers\ClaraIntegrationController;
 use App\Http\Controllers\KnowledgeUpdateQueueController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\ReactApiController;
@@ -15,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('webhooks.whatsapp.verify');
 Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('webhooks.whatsapp.receive');
+Route::post('/api/scc/callback', ClaraCallbackController::class)->name('api.scc.callback');
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -64,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/queue/{prospect}/snooze', [ReactApiController::class, 'queueSnooze'])->name('react-api.queue.snooze');
         Route::post('/queue/{prospect}/dismiss', [ReactApiController::class, 'queueDismiss'])->name('react-api.queue.dismiss');
         Route::get('/queue/{prospect}/history', [ReactApiController::class, 'queueHistory'])->name('react-api.queue.history');
+        Route::get('/lead-insight/{prospect}', [ReactApiController::class, 'leadInsight'])->name('react-api.lead-insight');
         Route::get('/prospects', [ReactApiController::class, 'prospects'])->name('react-api.prospects');
         Route::get('/prospects/form', [ReactApiController::class, 'prospectForm'])->name('react-api.prospects.form');
         Route::get('/prospects/{prospect}', [ReactApiController::class, 'prospectDetail'])->name('react-api.prospects.show');
@@ -91,6 +95,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/user-master-data/teams', [UserMasterDataController::class, 'storeTeam'])->name('react-api.user-master-data.teams.store');
         Route::patch('/user-master-data/teams/{team}', [UserMasterDataController::class, 'updateTeam'])->name('react-api.user-master-data.teams.update');
         Route::delete('/user-master-data/teams/{team}', [UserMasterDataController::class, 'destroyTeam'])->name('react-api.user-master-data.teams.destroy');
+    });
+    Route::prefix('/api')->group(function () {
+        Route::post('/clara/analyze-lead/{prospect}', [ClaraIntegrationController::class, 'analyzeLead'])->name('api.clara.analyze-lead');
+        Route::post('/clara/analyze-chat/{prospect}', [ClaraIntegrationController::class, 'analyzeChat'])->name('api.clara.analyze-chat');
+        Route::post('/clara/analyze-followup/{prospect}', [ClaraIntegrationController::class, 'analyzeFollowup'])->name('api.clara.analyze-followup');
+        Route::get('/scc/lead-insight/{prospect}', [ReactApiController::class, 'leadInsight'])->name('api.scc.lead-insight');
     });
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::patch('/prospects/{prospect}/quick-update', [ProspectController::class, 'quickUpdate'])->name('prospects.quick-update');

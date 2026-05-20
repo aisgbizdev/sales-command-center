@@ -271,6 +271,18 @@ export type QueueResponse = {
     nextActionExpiresAtLabel: string | null;
     computedAtLabel: string | null;
     lifecycleState: string;
+    aiInsight?: {
+      leadScore?: number | null;
+      temperature?: string | null;
+      dominantEmotion?: string | null;
+      topObjection?: string | null;
+      ghostRisk?: number | null;
+      nextActionCode?: string | null;
+      nextActionText?: string | null;
+      confidence?: number | null;
+      generatedAtLabel?: string | null;
+      expiresAtLabel?: string | null;
+    } | null;
     detailUrl: string;
   }[];
   meta: { currentPage: number; lastPage: number; perPage: number; total: number };
@@ -557,6 +569,18 @@ export type ProspectDetailResponse = {
     follow_up_state: string;
     priority_level: string;
     overdue_days: number;
+    aiInsight?: {
+      leadScore?: number | null;
+      temperature?: string | null;
+      dominantEmotion?: string | null;
+      topObjection?: string | null;
+      ghostRisk?: number | null;
+      nextActionCode?: string | null;
+      nextActionText?: string | null;
+      confidence?: number | null;
+      generatedAtLabel?: string | null;
+      expiresAtLabel?: string | null;
+    } | null;
   };
   logs: {
     id: number;

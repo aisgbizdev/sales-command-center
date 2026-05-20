@@ -89,9 +89,15 @@ export function QueuePage() {
     item.overdueMinutes > 0 ? `${Math.floor(item.overdueMinutes / 60)}h` : "-",
     <div key={`${item.leadId}-action`} className="space-y-1">
       <p>{item.nextActionLabel}</p>
+      {item.aiInsight?.nextActionText ? (
+        <p className="text-xs text-cyan-200">AI: {item.aiInsight.nextActionText}</p>
+      ) : null}
       <p className="text-xs text-[#d9c995]/70">
         {item.nextActionConfidence ? `${item.nextActionConfidence}%` : "-"} · {item.nextActionExpiresAtLabel ?? "-"}
       </p>
+      {item.aiInsight?.confidence !== undefined && item.aiInsight?.confidence !== null ? (
+        <p className="text-xs text-[#d9c995]/70">AI confidence: {Math.round(item.aiInsight.confidence * 100)}%</p>
+      ) : null}
     </div>,
     <div key={`${item.leadId}-ctl`} className="flex flex-wrap gap-2">
       <a href={item.detailUrl} className="rounded-xl border border-white/10 px-2 py-1 text-xs hover:bg-white/5">
@@ -281,4 +287,3 @@ export function QueuePage() {
     </div>
   );
 }
-
