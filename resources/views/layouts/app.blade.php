@@ -90,7 +90,7 @@
                                 fill="currentColor" />
                         </svg>
                     </span>
-                    <span x-show="sidebarExpand">Prospek</span>
+                    <span x-show="sidebarExpand">Lead</span>
                 </a>
 
                 <a href="{{ route('prospects.pipeline') }}"

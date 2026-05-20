@@ -33,14 +33,14 @@ export function ProspectsPage() {
       <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <CardTitle className="text-3xl">Manajemen Prospek</CardTitle>
-            <CardDescription>List kerja harian utama. Filter, cek follow up, lalu lompat ke detail lama bila perlu edit lengkap.</CardDescription>
+            <CardTitle className="text-3xl">Manajemen Lead</CardTitle>
+            <CardDescription>List kerja harian utama. Capture cepat, follow up cepat, enrich data saat sudah qualify.</CardDescription>
           </div>
           {permissions.canCreateProspect ? (
             <a href={permissions.createUrl}>
               <Button>
                 <Plus className="h-4 w-4" />
-                Tambah Prospek
+                Tambah Lead
               </Button>
             </a>
           ) : null}
@@ -72,9 +72,9 @@ export function ProspectsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Daftar Prospek</CardTitle>
+          <CardTitle>Daftar Lead</CardTitle>
           <CardDescription>
-            Menampilkan {formatNumber(items.length)} dari {formatNumber(meta.total)} prospek.
+            Menampilkan {formatNumber(items.length)} dari {formatNumber(meta.total)} lead.
           </CardDescription>
         </CardHeader>
         <CardContent>

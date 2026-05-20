@@ -54,6 +54,7 @@ export function ProspectEditPage({ params }: { params: { id: string } }) {
 
 function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
   const [, setLocation] = useLocation();
+  const [showAdvanced, setShowAdvanced] = React.useState(mode === "edit");
 
   const formData = useQuery({
     queryKey: ["prospects", "form"],
@@ -67,7 +68,7 @@ function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
   });
 
   if (formData.isLoading || (mode === "edit" && detail.isLoading)) {
-    return <LoadingState label="Memuat form prospek..." />;
+    return <LoadingState label="Memuat form lead..." />;
   }
 
   if (formData.isError || !formData.data || (mode === "edit" && (detail.isError || !detail.data))) {
@@ -77,7 +78,6 @@ function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
   const data = formData.data;
   const current = detail.data?.prospect;
   const editDetail = detail.data;
-
   const action = mode === "create" ? "/prospects" : `/prospects/${current?.id}`;
 
   return (
@@ -85,8 +85,12 @@ function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
       <Card>
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle className="text-3xl">{mode === "create" ? "Input Prospek Baru" : "Edit Prospek"}</CardTitle>
-            <CardDescription>{mode === "create" ? "Tambahkan prospek baru ke sistem." : `Update data untuk ${current?.prospectCode}.`}</CardDescription>
+            <CardTitle className="text-3xl">{mode === "create" ? "Quick Capture Lead" : "Edit Lead"}</CardTitle>
+            <CardDescription>
+              {mode === "create"
+                ? "Simpan lead secepatnya dulu. Profil lengkap isi setelah percakapan berjalan."
+                : `Update data untuk ${current?.prospectCode}.`}
+            </CardDescription>
           </div>
           <Button type="button" variant="secondary" onClick={() => setLocation("/prospects")}>
             <ArrowLeft className="h-4 w-4" />
@@ -101,18 +105,28 @@ function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Data Utama Prospek</CardTitle>
-            <CardDescription>Identitas dan info dasar prospek.</CardDescription>
+            <CardTitle>Data Utama Lead</CardTitle>
+            <CardDescription>Field minimum untuk mulai follow up.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="grid gap-2 text-sm text-[#d9c995] sm:col-span-2 lg:col-span-3">
-              Nama Prospek
+              Nama Lead
               <input
                 name="name"
                 defaultValue={current?.name ?? ""}
                 required
                 className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
                 placeholder="Contoh: Budi Santoso"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-[#d9c995]">
+              WhatsApp
+              <input
+                name="phone"
+                defaultValue={editDetail?.prospect.phone ?? ""}
+                required
+                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                placeholder="Contoh: 0812xxxxxx"
               />
             </label>
             <label className="grid gap-2 text-sm text-[#d9c995]">
@@ -125,15 +139,6 @@ function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
               />
             </label>
             <label className="grid gap-2 text-sm text-[#d9c995]">
-              Nomor HP / WhatsApp
-              <input
-                name="phone"
-                defaultValue={editDetail?.prospect.phone ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
-                placeholder="Contoh: 0812xxxxxx"
-              />
-            </label>
-            <label className="grid gap-2 text-sm text-[#d9c995]">
               Email
               <input
                 type="email"
@@ -143,103 +148,94 @@ function ProspectForm({ mode, id }: { mode: "create" | "edit"; id?: string }) {
                 placeholder="Opsional"
               />
             </label>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Klasifikasi Penjualan</CardTitle>
-            <CardDescription>Label dan sinyal AI untuk filter dashboard.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <SelectField name="source" label="Sumber" options={data.sources} defaultValue={editDetail?.prospect.source ?? ""} placeholder="-" />
-            <SelectField name="account_category" label="Kategori Akun" options={data.accountCategories} defaultValue={current?.accountCategory ?? "reguler"} required />
-            <SelectField name="status" label="Status" options={data.statuses} defaultValue={current?.status ?? "baru"} required />
-            <SelectField name="gpt_mode" label="Mode GPT" options={data.gptModes} defaultValue={editDetail?.prospect.gptMode ?? ""} placeholder="Ikuti kategori akun" />
-            <SelectField name="user_temperature" label="User Temperature" options={data.userTemperatures} defaultValue={editDetail?.prospect.userTemperature ?? ""} placeholder="-" />
-            <SelectField name="dominant_emotion" label="Emosi Dominan" options={data.dominantEmotions} defaultValue={editDetail?.prospect.dominantEmotion ?? ""} placeholder="-" />
-            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
-              <input type="checkbox" name="bridge_candidate" value="1" defaultChecked={editDetail?.prospect.bridgeCandidate ?? false} />
-              Kandidat Bridge
-            </label>
-            <SelectField name="bridge_status" label="Bridge Status" options={data.bridgeStatuses} defaultValue={editDetail?.prospect.bridgeStatus ?? ""} placeholder="-" />
-            <SelectField name="lost_reason" label="Lost Reason" options={data.lostReasons} defaultValue={editDetail?.prospect.lostReason ?? ""} placeholder="-" />
-            <label className="grid gap-2 text-sm text-[#d9c995] sm:col-span-2 lg:col-span-3">
-              Keberatan Utama
-              <textarea
-                name="main_objection"
-                defaultValue={editDetail?.prospect.mainObjection ?? ""}
-                className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
-                placeholder="Catat keberatan inti prospek"
-              />
-            </label>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Prioritas dan Follow Up</CardTitle>
-            <CardDescription>Dipakai untuk reminder dan deteksi overdue.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="grid gap-2 text-sm text-[#d9c995]">
-              Prioritas
-              <select
-                name="priority"
-                defaultValue={String(editDetail?.prospect.priority ?? 2)}
-                required
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
-              >
-                <option value="1">Tinggi</option>
-                <option value="2">Sedang</option>
-                <option value="3">Rendah</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm text-[#d9c995]">
-              Estimasi Nilai Potensi
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                name="estimation_value"
-                defaultValue={String(editDetail?.prospect.estimationValue ?? 0)}
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
-              />
-            </label>
-            <label className="grid gap-2 text-sm text-[#d9c995]">
-              Tanggal Follow Up Berikutnya
-              <input
-                type="date"
-                name="next_follow_up_date"
-                defaultValue={editDetail?.prospect.nextFollowUpDate ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
-              />
-            </label>
+            <SelectField name="source" label="Sumber" options={data.sources} defaultValue={editDetail?.prospect.source ?? ""} placeholder="Opsional" />
+            <SelectField name="status" label="Status Lead" options={data.statuses} defaultValue={current?.status ?? "baru"} />
             {data.canAssignOwner ? (
-              <SelectField name="owner_id" label="Owner (Penjualan)" options={data.salesUsers} defaultValue={editDetail?.prospect.ownerId ?? ""} placeholder="Pilih owner" required />
+              <SelectField name="owner_id" label="Owner (Sales)" options={data.salesUsers} defaultValue={editDetail?.prospect.ownerId ?? ""} placeholder="Pilih owner" required />
             ) : null}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Catatan Internal</CardTitle>
-            <CardDescription>Ringkasan tambahan untuk tim internal.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Profil Lanjutan</CardTitle>
+              <CardDescription>Buka saat lead sudah qualify. Tidak wajib saat input awal.</CardDescription>
+            </div>
+            <Button type="button" variant="secondary" onClick={() => setShowAdvanced((prev) => !prev)}>
+              {showAdvanced ? "Sembunyikan" : "Lanjutkan Profil"}
+            </Button>
           </CardHeader>
-          <CardContent>
-            <textarea
-              name="notes"
-              defaultValue={current?.notes ?? ""}
-              className="min-h-[120px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
-              placeholder="Catatan singkat untuk tim internal"
-            />
-          </CardContent>
+          {showAdvanced ? (
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <SelectField name="account_category" label="Kategori Akun" options={data.accountCategories} defaultValue={current?.accountCategory ?? "reguler"} />
+              <SelectField name="gpt_mode" label="Mode GPT" options={data.gptModes} defaultValue={editDetail?.prospect.gptMode ?? ""} placeholder="Ikuti kategori akun" />
+              <SelectField name="user_temperature" label="User Temperature" options={data.userTemperatures} defaultValue={editDetail?.prospect.userTemperature ?? ""} placeholder="Idealnya auto dari chat" />
+              <SelectField name="dominant_emotion" label="Emosi Dominan" options={data.dominantEmotions} defaultValue={editDetail?.prospect.dominantEmotion ?? ""} placeholder="Idealnya auto dari chat" />
+              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#d9c995]">
+                <input type="checkbox" name="bridge_candidate" value="1" defaultChecked={editDetail?.prospect.bridgeCandidate ?? false} />
+                Kandidat Bridge
+              </label>
+              <SelectField name="bridge_status" label="Bridge Status" options={data.bridgeStatuses} defaultValue={editDetail?.prospect.bridgeStatus ?? ""} placeholder="-" />
+              <SelectField name="lost_reason" label="Lost Reason" options={data.lostReasons} defaultValue={editDetail?.prospect.lostReason ?? ""} placeholder="Isi jika lost" />
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Prioritas
+                <select
+                  name="priority"
+                  defaultValue={String(editDetail?.prospect.priority ?? 2)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                >
+                  <option value="1">Tinggi</option>
+                  <option value="2">Sedang</option>
+                  <option value="3">Rendah</option>
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Estimasi Nilai Potensi
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  name="estimation_value"
+                  defaultValue={String(editDetail?.prospect.estimationValue ?? 0)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                />
+              </label>
+              <label className="grid gap-2 text-sm text-[#d9c995]">
+                Tanggal Follow Up Berikutnya
+                <input
+                  type="date"
+                  name="next_follow_up_date"
+                  defaultValue={editDetail?.prospect.nextFollowUpDate ?? ""}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-[#fff2a2] outline-none focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                />
+              </label>
+              <label className="grid gap-2 text-sm text-[#d9c995] sm:col-span-2 lg:col-span-3">
+                Keberatan Utama
+                <textarea
+                  name="main_objection"
+                  defaultValue={editDetail?.prospect.mainObjection ?? ""}
+                  className="min-h-[92px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                  placeholder="Lebih baik terisi dari ringkasan chat, bukan asumsi."
+                />
+              </label>
+              <label className="grid gap-2 text-sm text-[#d9c995] sm:col-span-2 lg:col-span-3">
+                Catatan Internal
+                <textarea
+                  name="notes"
+                  defaultValue={current?.notes ?? ""}
+                  className="min-h-[120px] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#fff2a2] outline-none placeholder:text-[#d9c995]/60 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                  placeholder="Catatan internal tim."
+                />
+              </label>
+            </CardContent>
+          ) : null}
         </Card>
 
         <div className="flex items-center justify-end gap-3">
           <Button type="submit">
             <Save className="h-4 w-4" />
-            Simpan
+            Simpan Lead
           </Button>
         </div>
       </form>

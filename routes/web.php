@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/prospects/{prospect}', ReactAppController::class)->name('prospects.show');
     Route::get('/prospects/{prospect}/edit', ReactAppController::class)->name('prospects.edit');
     Route::get('/pipeline', ReactAppController::class)->name('prospects.pipeline');
+    Route::get('/queue', ReactAppController::class)->name('queue.index');
     Route::get('/manager-insights', ReactAppController::class)->name('manager-insights');
     Route::get('/kinerja-penjualan', ReactAppController::class)->name('prospects.performance');
     Route::get('/chat-reviews', ReactAppController::class)->name('chat-reviews.index');
@@ -57,9 +58,16 @@ Route::middleware('auth')->group(function () {
     Route::prefix('/react-api')->group(function () {
         Route::get('/meta', [ReactApiController::class, 'meta'])->name('react-api.meta');
         Route::get('/dashboard', [ReactApiController::class, 'dashboard'])->name('react-api.dashboard');
+        Route::get('/action-center', [ReactApiController::class, 'actionCenter'])->name('react-api.action-center');
+        Route::get('/queue', [ReactApiController::class, 'queue'])->name('react-api.queue');
+        Route::post('/queue/{prospect}/done', [ReactApiController::class, 'queueMarkDone'])->name('react-api.queue.done');
+        Route::post('/queue/{prospect}/snooze', [ReactApiController::class, 'queueSnooze'])->name('react-api.queue.snooze');
+        Route::post('/queue/{prospect}/dismiss', [ReactApiController::class, 'queueDismiss'])->name('react-api.queue.dismiss');
+        Route::get('/queue/{prospect}/history', [ReactApiController::class, 'queueHistory'])->name('react-api.queue.history');
         Route::get('/prospects', [ReactApiController::class, 'prospects'])->name('react-api.prospects');
         Route::get('/prospects/form', [ReactApiController::class, 'prospectForm'])->name('react-api.prospects.form');
         Route::get('/prospects/{prospect}', [ReactApiController::class, 'prospectDetail'])->name('react-api.prospects.show');
+        Route::get('/prospects/{prospect}/timeline', [ReactApiController::class, 'prospectTimeline'])->name('react-api.prospects.timeline');
         Route::post('/prospects/{prospect}/logs', [ReactApiController::class, 'storeProspectLog'])->name('react-api.prospects.logs.store');
         Route::get('/pipeline', [ReactApiController::class, 'pipeline'])->name('react-api.pipeline');
         Route::get('/performance', [ReactApiController::class, 'performance'])->name('react-api.performance');

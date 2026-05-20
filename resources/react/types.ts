@@ -223,6 +223,74 @@ export type DashboardResponse = {
   };
 };
 
+export type ActionCenterResponse = {
+  summary: {
+    overdueCount: number;
+    warmUncontactedCount: number;
+    ghostRiskCount: number;
+    hotOpportunityCount: number;
+  };
+  queues: {
+    overdue: ActionCenterLeadItem[];
+    warmUncontacted: ActionCenterLeadItem[];
+    ghostRisk: (ActionCenterLeadItem & { outbound_last_48h_count?: number; inbound_last_48h_count?: number })[];
+    hotOpportunity: ActionCenterLeadItem[];
+  };
+};
+
+export type ActionCenterLeadItem = {
+  id: number;
+  prospectCode: string;
+  name: string;
+  status: string;
+  statusLabel: string;
+  owner: string;
+  nextFollowUpDateLabel: string;
+  followUpState: string;
+  priorityLevel: string;
+  lastActivityDiff: string;
+  detailUrl: string;
+};
+
+export type QueueResponse = {
+  items: {
+    leadId: number;
+    prospectCode: string;
+    name: string;
+    owner: string;
+    status: string;
+    statusLabel: string;
+    priorityScore: number;
+    priorityBand: "p0" | "p1" | "p2" | "p3";
+    ghostRiskScore: number;
+    overdueMinutes: number;
+    responseDelayMinutes: number;
+    nextActionCode: string | null;
+    nextActionLabel: string;
+    nextActionConfidence: number | null;
+    nextActionExpiresAtLabel: string | null;
+    computedAtLabel: string | null;
+    lifecycleState: string;
+    detailUrl: string;
+  }[];
+  meta: { currentPage: number; lastPage: number; perPage: number; total: number };
+  filters: {
+    current: Record<string, string>;
+    reasonTags: Option[];
+  };
+};
+
+export type QueueHistoryResponse = {
+  items: {
+    id: number;
+    actionType: string;
+    reasonTag: string | null;
+    reasonNote: string | null;
+    actedAtLabel: string | null;
+    actedByUserId: number | null;
+  }[];
+};
+
 export type ProspectsResponse = {
   items: {
     id: number;

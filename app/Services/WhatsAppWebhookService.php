@@ -5,10 +5,17 @@ namespace App\Services;
 use App\Models\Prospect;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppMessage;
+use App\Services\LeadTimelineService;
 use Carbon\Carbon;
 
 class WhatsAppWebhookService
 {
+    public function __construct(
+        private readonly LeadTimelineService $timeline,
+        private readonly LeadOperationalSnapshotService $snapshotService
+    ) {
+    }
+
     public function handle(array $payload): void
     {
         $entries = $payload['entry'] ?? [];
@@ -85,12 +92,12 @@ class WhatsAppWebhookService
 
             if ($messageId !== '') {
                 $attributes['wa_message_id'] = $messageId;
-                WhatsAppMessage::query()->updateOrCreate(
+                $savedMessage = WhatsAppMessage::query()->updateOrCreate(
                     ['wa_message_id' => $messageId],
                     $attributes
                 );
             } else {
-                WhatsAppMessage::query()->create($attributes);
+                $savedMessage = WhatsAppMessage::query()->create($attributes);
             }
 
             $conversation->forceFill([
@@ -98,6 +105,32 @@ class WhatsAppWebhookService
                 'last_inbound_at' => $this->maxTimestamp($conversation->last_inbound_at, $sentAt) ?? now(),
                 'unread_for_owner' => $conversation->unread_for_owner + 1,
             ])->save();
+
+            if ($conversation->prospect_id) {
+                $lead = Prospect::query()->find($conversation->prospect_id);
+                if ($lead) {
+                    $this->snapshotService->recomputeLead($lead);
+                }
+
+                $this->timeline->record(
+                    leadId: $conversation->prospect_id,
+                    eventType: 'whatsapp.message_received',
+                    payload: [
+                        'conversation_id' => $conversation->id,
+                        'wa_message_id' => $savedMessage->wa_message_id,
+                        'from' => $fromNumber,
+                        'message_type' => $messageType,
+                        'excerpt' => mb_substr((string) ($body ?? ''), 0, 280),
+                    ],
+                    actorType: 'integration',
+                    actorId: null,
+                    source: 'wa_webhook',
+                    refType: 'whatsapp_message',
+                    refId: $savedMessage->id,
+                    dedupeKey: $savedMessage->wa_message_id ? 'wa_inbound_'.$savedMessage->wa_message_id : null,
+                    eventAt: $sentAt
+                );
+            }
         }
     }
 
@@ -159,6 +192,30 @@ class WhatsAppWebhookService
                 $conversation->forceFill([
                     'last_message_at' => $nextLastMessageAt,
                 ])->save();
+            }
+
+            if ($conversation->prospect_id && $status !== '') {
+                $lead = Prospect::query()->find($conversation->prospect_id);
+                if ($lead) {
+                    $this->snapshotService->recomputeLead($lead);
+                }
+
+                $this->timeline->record(
+                    leadId: $conversation->prospect_id,
+                    eventType: 'whatsapp.message_status_updated',
+                    payload: [
+                        'conversation_id' => $conversation->id,
+                        'wa_message_id' => $message->wa_message_id,
+                        'status' => $status,
+                    ],
+                    actorType: 'integration',
+                    actorId: null,
+                    source: 'wa_webhook',
+                    refType: 'whatsapp_message',
+                    refId: $message->id,
+                    dedupeKey: $message->wa_message_id ? 'wa_status_'.$message->wa_message_id.'_'.$status : null,
+                    eventAt: $statusAt
+                );
             }
         }
     }

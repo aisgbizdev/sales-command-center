@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Prospect extends Model
 {
@@ -299,5 +300,20 @@ class Prospect extends Model
     public function whatsAppMessages(): HasMany
     {
         return $this->hasMany(WhatsAppMessage::class);
+    }
+
+    public function timelineEvents(): HasMany
+    {
+        return $this->hasMany(LeadTimelineEvent::class, 'lead_id');
+    }
+
+    public function aiInsights(): HasMany
+    {
+        return $this->hasMany(LeadAiInsight::class, 'lead_id');
+    }
+
+    public function operationalSnapshot(): HasOne
+    {
+        return $this->hasOne(LeadOperationalSnapshot::class, 'lead_id');
     }
 }

@@ -10,6 +10,7 @@ import {
     Command,
     KanbanSquare,
     LayoutDashboard,
+    ListTodo,
     LogOut,
     MessageSquareQuote,
     UserCog,
@@ -34,6 +35,7 @@ import { KnowledgeQueuePage } from "@/pages/KnowledgeQueuePage";
 import { ManagerInsightsPage } from "@/pages/ManagerInsightsPage";
 import { PerformancePage } from "@/pages/PerformancePage";
 import { PipelinePage } from "@/pages/PipelinePage";
+import { QueuePage } from "@/pages/QueuePage";
 import { ProspectsPage } from "@/pages/ProspectsPage";
 import { ProspectCreatePage, ProspectEditPage } from "@/pages/ProspectFormPage";
 import { ProspectDetailPage } from "@/pages/ProspectDetailPage";
@@ -45,6 +47,7 @@ const navIcons = {
     Dashboard: LayoutDashboard,
     Prospek: Users,
     Pipeline: KanbanSquare,
+    Queue: ListTodo,
     "Command Center": Command,
     Kinerja: BarChart3,
     "Tinjauan Obrolan": MessageSquareQuote,
@@ -270,6 +273,7 @@ function AppShell() {
                         />
                         <Route path="/prospects" component={ProspectsPage} />
                         <Route path="/pipeline" component={PipelinePage} />
+                        <Route path="/queue" component={QueuePage} />
                         <Route
                             path="/manager-insights"
                             component={ManagerInsightsPage}

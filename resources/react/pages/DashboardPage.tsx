@@ -6,7 +6,7 @@ import { useSearch } from "wouter/use-browser-location";
 
 import { boot, fetchJson } from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import type { DashboardResponse, SalesDisciplineMetric } from "@/types";
+import type { ActionCenterResponse, DashboardResponse, SalesDisciplineMetric } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,11 @@ export function DashboardPage() {
   const dashboard = useQuery({
     queryKey: ["dashboard", queryString],
     queryFn: () => fetchJson<DashboardResponse>(`/react-api/dashboard${queryString}`),
+  });
+
+  const actionCenter = useQuery({
+    queryKey: ["action-center", queryString],
+    queryFn: () => fetchJson<ActionCenterResponse>(`/react-api/action-center${queryString}`),
   });
 
   if (dashboard.isLoading) return <LoadingState label="Memuat dashboard..." />;
@@ -105,6 +110,66 @@ export function DashboardPage() {
         <MetricCard label="High Priority Leads" value={kpis.highPriorityCount} note="Lead critical atau high yang butuh action cepat." />
         <MetricCard label="Lead > 7 Hari di Stage" value={kpis.agingOverSevenDaysCount} note="Lead aktif yang terlalu lama di status saat ini." />
       </div>
+
+      {actionCenter.data ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Action Center</CardTitle>
+            <CardDescription>Queue aksi prioritas untuk 2 jam kerja berikutnya.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <MiniMetric label="Overdue" value={actionCenter.data.summary.overdueCount} variant="danger" />
+              <MiniMetric label="Warm Uncontacted" value={actionCenter.data.summary.warmUncontactedCount} variant="warn" />
+              <MiniMetric label="Ghost Risk" value={actionCenter.data.summary.ghostRiskCount} variant="danger" />
+              <MiniMetric label="Hot Opportunity" value={actionCenter.data.summary.hotOpportunityCount} variant="orange" />
+            </div>
+
+            <DataTable
+              headers={["Queue", "Lead", "Owner", "Status", "Signal", "Priority", "Aksi"]}
+              rows={[
+                ...actionCenter.data.queues.overdue.map((item) => [
+                  "Overdue",
+                  `${item.prospectCode} - ${item.name}`,
+                  item.owner,
+                  <Badge key={`s-o-${item.id}`} variant={statusVariant(item.status)}>{item.statusLabel}</Badge>,
+                  item.nextFollowUpDateLabel,
+                  <Badge key={`p-o-${item.id}`} variant={priorityVariant(item.priorityLevel)}>{item.priorityLevel}</Badge>,
+                  <a key={`a-o-${item.id}`} href={item.detailUrl} className="underline-offset-4 hover:underline">Open</a>,
+                ]),
+                ...actionCenter.data.queues.warmUncontacted.map((item) => [
+                  "Warm Uncontacted",
+                  `${item.prospectCode} - ${item.name}`,
+                  item.owner,
+                  <Badge key={`s-w-${item.id}`} variant={statusVariant(item.status)}>{item.statusLabel}</Badge>,
+                  "Belum ada kontak",
+                  <Badge key={`p-w-${item.id}`} variant={priorityVariant(item.priorityLevel)}>{item.priorityLevel}</Badge>,
+                  <a key={`a-w-${item.id}`} href={item.detailUrl} className="underline-offset-4 hover:underline">Open</a>,
+                ]),
+                ...actionCenter.data.queues.ghostRisk.map((item) => [
+                  "Ghost Risk",
+                  `${item.prospectCode} - ${item.name}`,
+                  item.owner,
+                  <Badge key={`s-g-${item.id}`} variant={statusVariant(item.status)}>{item.statusLabel}</Badge>,
+                  `${item.outbound_last_48h_count ?? 0} out / ${item.inbound_last_48h_count ?? 0} in (48h)`,
+                  <Badge key={`p-g-${item.id}`} variant={priorityVariant(item.priorityLevel)}>{item.priorityLevel}</Badge>,
+                  <a key={`a-g-${item.id}`} href={item.detailUrl} className="underline-offset-4 hover:underline">Open</a>,
+                ]),
+                ...actionCenter.data.queues.hotOpportunity.map((item) => [
+                  "Hot Opportunity",
+                  `${item.prospectCode} - ${item.name}`,
+                  item.owner,
+                  <Badge key={`s-h-${item.id}`} variant={statusVariant(item.status)}>{item.statusLabel}</Badge>,
+                  item.lastActivityDiff,
+                  <Badge key={`p-h-${item.id}`} variant={priorityVariant(item.priorityLevel)}>{item.priorityLevel}</Badge>,
+                  <a key={`a-h-${item.id}`} href={item.detailUrl} className="underline-offset-4 hover:underline">Open</a>,
+                ]),
+              ]}
+              emptyMessage="Belum ada item prioritas di Action Center."
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

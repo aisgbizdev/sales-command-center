@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatReview;
 use App\Models\KnowledgeUpdateQueue;
+use App\Models\LeadQueueActionHistory;
+use App\Models\LeadOperationalSnapshot;
 use App\Models\Prospect;
 use App\Models\ProspectLog;
 use App\Models\User;
+use App\Services\LeadOperationalSnapshotService;
 use App\Services\ManagerInsightService;
 use App\Services\ObjectionAnalyticsService;
+use App\Services\QueueActionLifecycleService;
 use App\Services\SalesDisciplineMetricsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -112,7 +116,11 @@ class ReactApiController extends Controller
         ]);
     }
 
-    public function storeProspectLog(Request $request, Prospect $prospect): JsonResponse
+    public function storeProspectLog(
+        Request $request,
+        Prospect $prospect,
+        LeadOperationalSnapshotService $snapshotService
+    ): JsonResponse
     {
         $this->authorize('viewAny', Prospect::class);
         $user = $request->user();
@@ -141,7 +149,39 @@ class ReactApiController extends Controller
             'emotional_state' => $validated['emotional_state'] ?? null,
         ]);
 
+        $snapshotService->recomputeLead($prospect->fresh());
+
         return response()->json(['message' => 'Input harian tersimpan.']);
+    }
+
+    public function prospectTimeline(Request $request, Prospect $prospect): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+
+        $limit = max(1, min(100, (int) $request->integer('limit', 30)));
+
+        $events = $prospect->timelineEvents()
+            ->latest('event_at')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'items' => $events->map(fn ($event) => [
+                'id' => $event->id,
+                'eventType' => $event->event_type,
+                'eventAt' => $event->event_at?->toISOString(),
+                'eventAtLabel' => $event->event_at?->format('d/m/Y H:i:s'),
+                'actorType' => $event->actor_type,
+                'actorId' => $event->actor_id,
+                'source' => $event->source,
+                'payload' => $event->payload,
+                'refType' => $event->ref_type,
+                'refId' => $event->ref_id,
+            ])->values(),
+        ]);
     }
 
     public function chatReviewForm(Request $request): JsonResponse
@@ -350,6 +390,288 @@ class ReactApiController extends Controller
                 'current' => $this->currentFilters($request),
                 ...$this->filterOptions($user),
             ],
+        ]);
+    }
+
+    public function actionCenter(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+        $prospects = $this->applyProspectFilters(Prospect::query(), $request);
+        $this->scopeProspects($prospects, $user);
+
+        $overdueLeads = $this->overdueFollowUpQuery(clone $prospects)
+            ->with('owner:id,name')
+            ->orderBy('next_follow_up_date')
+            ->limit(10)
+            ->get();
+
+        $warmUncontacted = (clone $prospects)
+            ->with('owner:id,name')
+            ->where('user_temperature', 'warm')
+            ->whereDoesntHave('whatsAppMessages')
+            ->whereDoesntHave('logs')
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        $ghostRisk = (clone $prospects)
+            ->with('owner:id,name')
+            ->whereHas('whatsAppMessages', fn (Builder $q) => $q
+                ->where('direction', 'outbound')
+                ->where('sent_at', '>=', now()->subHours(48)))
+            ->whereDoesntHave('whatsAppMessages', fn (Builder $q) => $q
+                ->where('direction', 'inbound')
+                ->where('sent_at', '>=', now()->subHours(48)))
+            ->withCount([
+                'whatsAppMessages as outbound_last_48h_count' => fn (Builder $q) => $q
+                    ->where('direction', 'outbound')
+                    ->where('sent_at', '>=', now()->subHours(48)),
+                'whatsAppMessages as inbound_last_48h_count' => fn (Builder $q) => $q
+                    ->where('direction', 'inbound')
+                    ->where('sent_at', '>=', now()->subHours(48)),
+            ])
+            ->orderByDesc('outbound_last_48h_count')
+            ->limit(10)
+            ->get();
+
+        $hotOpportunities = (clone $prospects)
+            ->with('owner:id,name')
+            ->whereIn('status', [Prospect::STATUS_TINDAK_LANJUT, Prospect::STATUS_PENUTUPAN])
+            ->where('user_temperature', 'hot')
+            ->where(function (Builder $q) {
+                $q->where('last_activity_at', '<', now()->subHours(12))
+                    ->orWhereNull('last_activity_at');
+            })
+            ->orderBy('next_follow_up_date')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'summary' => [
+                'overdueCount' => $overdueLeads->count(),
+                'warmUncontactedCount' => $warmUncontacted->count(),
+                'ghostRiskCount' => $ghostRisk->count(),
+                'hotOpportunityCount' => $hotOpportunities->count(),
+            ],
+            'queues' => [
+                'overdue' => $overdueLeads->map(fn (Prospect $lead) => $this->actionLeadItem($lead))->values(),
+                'warmUncontacted' => $warmUncontacted->map(fn (Prospect $lead) => $this->actionLeadItem($lead))->values(),
+                'ghostRisk' => $ghostRisk->map(fn (Prospect $lead) => $this->actionLeadItem($lead, [
+                    'outbound_last_48h_count' => (int) ($lead->outbound_last_48h_count ?? 0),
+                    'inbound_last_48h_count' => (int) ($lead->inbound_last_48h_count ?? 0),
+                ]))->values(),
+                'hotOpportunity' => $hotOpportunities->map(fn (Prospect $lead) => $this->actionLeadItem($lead))->values(),
+            ],
+        ]);
+    }
+
+    public function queue(Request $request, LeadOperationalSnapshotService $snapshotService): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+
+        $baseProspects = $this->applyProspectFilters(Prospect::query(), $request);
+        $this->scopeProspects($baseProspects, $user);
+
+        $leadIds = (clone $baseProspects)->pluck('prospects.id');
+        $staleCutoff = now()->subMinutes(15);
+
+        $staleLeadIds = LeadOperationalSnapshot::query()
+            ->whereIn('lead_id', $leadIds)
+            ->where(function (Builder $q) use ($staleCutoff) {
+                $q->whereNull('computed_at')->orWhere('computed_at', '<', $staleCutoff);
+            })
+            ->pluck('lead_id');
+
+        $missingLeadIds = $leadIds->diff(
+            LeadOperationalSnapshot::query()
+                ->whereIn('lead_id', $leadIds)
+                ->pluck('lead_id')
+        );
+
+        $recomputeIds = $staleLeadIds->merge($missingLeadIds)->unique()->values();
+        if ($recomputeIds->isNotEmpty()) {
+            $recomputeLeads = Prospect::query()->whereIn('id', $recomputeIds)->get();
+            $snapshotService->recomputeCollection($recomputeLeads);
+        }
+
+        $sortBy = $request->string('sort')->toString() ?: 'priority';
+        $perPage = max(10, min(100, (int) $request->integer('per_page', 25)));
+        $page = max(1, (int) $request->integer('page', 1));
+        $offset = ($page - 1) * $perPage;
+
+        $queue = LeadOperationalSnapshot::query()
+            ->with(['lead.owner:id,name', 'queueState'])
+            ->whereIn('lead_id', $leadIds)
+            ->when($request->string('priority_band')->toString(), fn (Builder $q, string $band) => $q->where('priority_band', $band))
+            ->when($request->boolean('ghost_risk'), fn (Builder $q) => $q->where('ghost_risk_score', '>=', 70))
+            ->when($request->boolean('overdue_only'), fn (Builder $q) => $q->where('overdue_minutes', '>', 0));
+
+        if ($sortBy === 'sla') {
+            $queue->orderByDesc('overdue_minutes')->orderByDesc('priority_score');
+        } elseif ($sortBy === 'fresh') {
+            $queue->orderBy('next_action_expires_at')->orderByDesc('priority_score');
+        } else {
+            $queue->orderByDesc('priority_score')->orderByDesc('overdue_minutes');
+        }
+
+        $items = $queue->get()->filter(function (LeadOperationalSnapshot $snapshot): bool {
+            return $this->isSnapshotVisibleInQueue($snapshot);
+        })->values();
+
+        $total = $items->count();
+        $items = $items->slice($offset, $perPage)->values();
+
+        return response()->json([
+            'items' => $items->map(function (LeadOperationalSnapshot $snapshot) {
+                $lead = $snapshot->lead;
+                if (! $lead) {
+                    return null;
+                }
+
+                return [
+                    'leadId' => $lead->id,
+                    'prospectCode' => $lead->prospect_code,
+                    'name' => $lead->name,
+                    'owner' => $lead->owner?->name ?? '-',
+                    'status' => $lead->status,
+                    'statusLabel' => Prospect::STATUS_LABELS[$lead->status] ?? strtoupper($lead->status),
+                    'priorityScore' => (int) $snapshot->priority_score,
+                    'priorityBand' => $snapshot->priority_band,
+                    'ghostRiskScore' => (int) $snapshot->ghost_risk_score,
+                    'overdueMinutes' => (int) $snapshot->overdue_minutes,
+                    'responseDelayMinutes' => (int) $snapshot->response_delay_minutes,
+                    'nextActionCode' => $snapshot->next_action_code,
+                    'nextActionLabel' => $this->nextActionLabel($snapshot->next_action_code),
+                    'nextActionConfidence' => $snapshot->next_action_confidence !== null ? (float) $snapshot->next_action_confidence : null,
+                    'nextActionExpiresAtLabel' => $snapshot->next_action_expires_at?->format('d M H:i'),
+                    'computedAtLabel' => $snapshot->computed_at?->format('d M H:i:s'),
+                    'lifecycleState' => $snapshot->queueState?->state ?? 'active',
+                    'detailUrl' => route('prospects.show', $lead),
+                ];
+            })->filter()->values(),
+            'meta' => [
+                'currentPage' => $page,
+                'perPage' => $perPage,
+                'total' => $total,
+                'lastPage' => max(1, (int) ceil($total / $perPage)),
+            ],
+            'filters' => [
+                'current' => [
+                    'sort' => $sortBy,
+                    'priority_band' => $request->string('priority_band')->toString(),
+                    'ghost_risk' => $request->string('ghost_risk')->toString(),
+                    'overdue_only' => $request->string('overdue_only')->toString(),
+                ],
+                'reasonTags' => [
+                    ['value' => 'contacted_via_other_channel', 'label' => 'Contacted via other channel'],
+                    ['value' => 'waiting_customer_reply', 'label' => 'Waiting customer reply'],
+                    ['value' => 'duplicate_queue_item', 'label' => 'Duplicate queue item'],
+                    ['value' => 'not_relevant_now', 'label' => 'Not relevant now'],
+                    ['value' => 'other', 'label' => 'Other'],
+                ],
+            ],
+        ]);
+    }
+
+    public function queueMarkDone(
+        Request $request,
+        Prospect $prospect,
+        QueueActionLifecycleService $lifecycle
+    ): JsonResponse {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+
+        $validated = $request->validate([
+            'reason_tag' => ['required', 'string', 'max:64'],
+            'reason_note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $state = $lifecycle->markDone($prospect, $user, $validated['reason_tag'], $validated['reason_note'] ?? null);
+
+        return response()->json([
+            'success' => true,
+            'state' => $state->state,
+        ]);
+    }
+
+    public function queueSnooze(
+        Request $request,
+        Prospect $prospect,
+        QueueActionLifecycleService $lifecycle
+    ): JsonResponse {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+
+        $validated = $request->validate([
+            'duration' => ['required', 'in:30m,2h,tomorrow'],
+            'reason_tag' => ['required', 'string', 'max:64'],
+            'reason_note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $state = $lifecycle->snooze(
+            $prospect,
+            $user,
+            $validated['duration'],
+            $validated['reason_tag'],
+            $validated['reason_note'] ?? null
+        );
+
+        return response()->json([
+            'success' => true,
+            'state' => $state->state,
+            'snoozedUntilLabel' => $state->snoozed_until?->format('d M H:i'),
+        ]);
+    }
+
+    public function queueDismiss(
+        Request $request,
+        Prospect $prospect,
+        QueueActionLifecycleService $lifecycle
+    ): JsonResponse {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+
+        $validated = $request->validate([
+            'reason_tag' => ['required', 'string', 'max:64'],
+            'reason_note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $state = $lifecycle->dismiss($prospect, $user, $validated['reason_tag'], $validated['reason_note'] ?? null);
+
+        return response()->json([
+            'success' => true,
+            'state' => $state->state,
+            'dismissedUntilLabel' => $state->dismissed_until?->format('d M H:i'),
+        ]);
+    }
+
+    public function queueHistory(Request $request, Prospect $prospect): JsonResponse
+    {
+        $this->authorize('viewAny', Prospect::class);
+        $user = $request->user();
+        abort_unless($this->scopedProspects($user)->whereKey($prospect->id)->exists(), 404);
+
+        $items = LeadQueueActionHistory::query()
+            ->where('lead_id', $prospect->id)
+            ->with('lead:id,prospect_code,name')
+            ->orderByDesc('acted_at')
+            ->limit(30)
+            ->get();
+
+        return response()->json([
+            'items' => $items->map(fn (LeadQueueActionHistory $item) => [
+                'id' => $item->id,
+                'actionType' => $item->action_type,
+                'reasonTag' => $item->reason_tag,
+                'reasonNote' => $item->reason_note,
+                'actedAtLabel' => $item->acted_at?->format('d M Y H:i:s'),
+                'actedByUserId' => $item->acted_by_user_id,
+            ])->values(),
         ]);
     }
 
@@ -820,8 +1142,9 @@ class ReactApiController extends Controller
             ],
             'navigation' => [
                 ['label' => 'Dashboard', 'href' => '/dashboard'],
-                ['label' => 'Prospek', 'href' => '/prospects'],
+                ['label' => 'Lead', 'href' => '/prospects'],
                 ['label' => 'Pipeline', 'href' => '/pipeline'],
+                ['label' => 'Queue', 'href' => '/queue'],
                 ['label' => 'WA WebView', 'href' => '/wa-webview'],
                 ...($user->can('access-performance') ? [['label' => 'Command Center', 'href' => '/manager-insights']] : []),
                 ...($user->can('access-performance') ? [['label' => 'Kinerja', 'href' => '/kinerja-penjualan']] : []),
@@ -851,6 +1174,69 @@ class ReactApiController extends Controller
             'priority_level' => $prospect->priority_level,
             'overdue_days' => $prospect->overdue_days,
         ];
+    }
+
+    private function actionLeadItem(Prospect $lead, array $extra = []): array
+    {
+        return [
+            'id' => $lead->id,
+            'prospectCode' => $lead->prospect_code,
+            'name' => $lead->name,
+            'status' => $lead->status,
+            'statusLabel' => Prospect::STATUS_LABELS[$lead->status] ?? strtoupper($lead->status),
+            'owner' => $lead->owner?->name ?? '-',
+            'nextFollowUpDateLabel' => $lead->next_follow_up_date?->format('d M Y') ?: '-',
+            'followUpState' => $lead->follow_up_state,
+            'priorityLevel' => $lead->priority_level,
+            'lastActivityDiff' => $lead->last_activity_diff,
+            'detailUrl' => route('prospects.show', $lead),
+            ...$extra,
+        ];
+    }
+
+    private function nextActionLabel(?string $code): string
+    {
+        return match ($code) {
+            'followup_overdue_now' => 'Follow up overdue sekarang',
+            'send_social_proof' => 'Kirim social proof',
+            'schedule_closing_call' => 'Jadwalkan closing call',
+            'nudge_followup_message' => 'Kirim nudge follow up',
+            'qualify_next_step' => 'Kualifikasi langkah berikutnya',
+            default => 'Review manual',
+        };
+    }
+
+    private function isSnapshotVisibleInQueue(LeadOperationalSnapshot $snapshot): bool
+    {
+        $state = $snapshot->queueState;
+        if (! $state) {
+            return true;
+        }
+
+        $fingerprint = implode(':', [
+            $snapshot->id,
+            $snapshot->version,
+            $snapshot->next_action_code ?? 'none',
+            $snapshot->priority_score,
+        ]);
+
+        if ($state->action_fingerprint !== $fingerprint) {
+            return true;
+        }
+
+        if ($state->state === QueueActionLifecycleService::ACTION_DONE) {
+            return false;
+        }
+
+        if ($state->state === QueueActionLifecycleService::ACTION_SNOOZE) {
+            return ! $state->snoozed_until || $state->snoozed_until->lte(now());
+        }
+
+        if ($state->state === QueueActionLifecycleService::ACTION_DISMISS) {
+            return ! $state->dismissed_until || $state->dismissed_until->lte(now());
+        }
+
+        return true;
     }
 
     private function objectionTypeOptions()

@@ -67,7 +67,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
     onError: () => toast.error("Gagal menyimpan input harian."),
   });
 
-  if (detail.isLoading) return <LoadingState label="Memuat detail prospek..." />;
+  if (detail.isLoading) return <LoadingState label="Memuat detail lead..." />;
   if (detail.isError || !detail.data) return <ErrorState />;
 
   const { prospect, logs } = detail.data;
@@ -95,7 +95,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
               {detail.data.canEdit ? (
                 <Button type="button" variant="secondary" onClick={() => setLocation(`/prospects/${prospect.id}/edit`)}>
                   <Pencil className="h-4 w-4" />
-                  Edit Data Prospek
+                    Edit Data Lead
                 </Button>
               ) : null}
             </div>
@@ -136,7 +136,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
         <Card>
           <CardHeader>
             <CardTitle>Input Harian Baru</CardTitle>
-            <CardDescription>Catat aktivitas terbaru tanpa harus mengubah semua data prospek.</CardDescription>
+            <CardDescription>Catat aktivitas terbaru tanpa harus mengubah semua data lead.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
             <div className="grid gap-3 md:grid-cols-2">
@@ -232,7 +232,7 @@ export function ProspectDetailPage({ params }: { params: { id: string } }) {
       <Card>
         <CardHeader>
           <CardTitle>Riwayat Input Harian</CardTitle>
-          <CardDescription>Aktivitas follow up yang sudah tercatat untuk prospek ini.</CardDescription>
+          <CardDescription>Aktivitas follow up yang sudah tercatat untuk lead ini.</CardDescription>
         </CardHeader>
         <CardContent>
           {logs.length === 0 ? (

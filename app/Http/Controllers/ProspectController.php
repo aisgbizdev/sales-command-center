@@ -4,13 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Prospect;
 use App\Models\ProspectLog;
+use App\Services\LeadOperationalSnapshotService;
 use App\Models\User;
+use App\Services\LeadTimelineService;
 use App\Support\RoleScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class ProspectController extends Controller
 {
+    public function __construct(
+        private readonly LeadTimelineService $timeline,
+        private readonly LeadOperationalSnapshotService $snapshotService
+    ) {
+    }
+
     public function index(Request $request)
     {
         $this->authorize('viewAny', Prospect::class);
@@ -179,6 +187,9 @@ class ProspectController extends Controller
     {
         $user = $request->user();
         $this->authorize('update', $prospect);
+        $previousStatus = $prospect->status;
+        $previousOwnerId = $prospect->owner_id;
+        $previousFollowUpDate = $prospect->next_follow_up_date?->toDateString();
 
         $validated = $request->validate([
             'status' => ['required', 'in:'.implode(',', Prospect::STATUSES)],
@@ -205,6 +216,55 @@ class ProspectController extends Controller
             'last_contact_at' => now(),
         ]);
 
+        if ($previousStatus !== $prospect->status) {
+            $this->timeline->record(
+                leadId: $prospect->id,
+                eventType: 'lead.status_changed',
+                payload: [
+                    'from' => $previousStatus,
+                    'to' => $prospect->status,
+                ],
+                actorType: 'user',
+                actorId: $user->id,
+                source: 'crm',
+                refType: 'prospect',
+                refId: $prospect->id
+            );
+        }
+
+        if ($previousOwnerId !== $prospect->owner_id) {
+            $this->timeline->record(
+                leadId: $prospect->id,
+                eventType: 'lead.owner_changed',
+                payload: [
+                    'from_owner_id' => $previousOwnerId,
+                    'to_owner_id' => $prospect->owner_id,
+                ],
+                actorType: 'user',
+                actorId: $user->id,
+                source: 'crm',
+                refType: 'prospect',
+                refId: $prospect->id
+            );
+        }
+
+        $nextFollowUpDate = $prospect->next_follow_up_date?->toDateString();
+        if ($previousFollowUpDate !== $nextFollowUpDate && $nextFollowUpDate !== null) {
+            $this->timeline->record(
+                leadId: $prospect->id,
+                eventType: 'lead.followup_scheduled',
+                payload: [
+                    'from' => $previousFollowUpDate,
+                    'to' => $nextFollowUpDate,
+                ],
+                actorType: 'user',
+                actorId: $user->id,
+                source: 'crm',
+                refType: 'prospect',
+                refId: $prospect->id
+            );
+        }
+
         ProspectLog::create([
             'log_date' => now()->toDateString(),
             'activity_type' => 'follow_up',
@@ -220,10 +280,13 @@ class ProspectController extends Controller
         ]);
 
         if ($request->expectsJson()) {
+            $this->snapshotService->recomputeLead($prospect->fresh());
             return response()->json([
                 'message' => 'Prospek berhasil diperbarui cepat.',
             ]);
         }
+
+        $this->snapshotService->recomputeLead($prospect->fresh());
 
         return back()->with('status', 'Prospek berhasil diperbarui cepat.');
     }
@@ -267,7 +330,39 @@ class ProspectController extends Controller
             ...$prospectPayload,
         ]);
 
+        $this->timeline->record(
+            leadId: $prospect->id,
+            eventType: 'lead.created',
+            payload: [
+                'lead_code' => $prospect->prospect_code,
+                'source' => $prospect->source,
+                'status' => $prospect->status,
+                'owner_id' => $prospect->owner_id,
+            ],
+            actorType: 'user',
+            actorId: $user->id,
+            source: 'crm',
+            refType: 'prospect',
+            refId: $prospect->id
+        );
+
+        $this->timeline->record(
+            leadId: $prospect->id,
+            eventType: 'lead.owner_assigned',
+            payload: [
+                'owner_id' => $prospect->owner_id,
+                'team_id' => $prospect->team_id,
+                'unit_id' => $prospect->unit_id,
+            ],
+            actorType: 'user',
+            actorId: $user->id,
+            source: 'crm',
+            refType: 'prospect',
+            refId: $prospect->id
+        );
+
         $this->saveDailyLogIfExists($validated, $prospect, $user);
+        $this->snapshotService->recomputeLead($prospect->fresh());
 
         return redirect()->route('prospects.index')->with('status', 'Prospek berhasil ditambahkan.');
     }
@@ -323,13 +418,66 @@ class ProspectController extends Controller
     {
         $user = $request->user();
         $this->authorize('update', $prospect);
+        $previousStatus = $prospect->status;
+        $previousOwnerId = $prospect->owner_id;
+        $previousFollowUpDate = $prospect->next_follow_up_date?->toDateString();
 
         $validated = $this->validateProspectPayload($request);
         $owner = $this->resolveOwner($user, $validated['owner_id'] ?? $prospect->owner_id);
 
         $prospect->update($this->buildProspectPayload($validated, $owner, $prospect));
 
+        if ($previousStatus !== $prospect->status) {
+            $this->timeline->record(
+                leadId: $prospect->id,
+                eventType: 'lead.status_changed',
+                payload: [
+                    'from' => $previousStatus,
+                    'to' => $prospect->status,
+                ],
+                actorType: 'user',
+                actorId: $user->id,
+                source: 'crm',
+                refType: 'prospect',
+                refId: $prospect->id
+            );
+        }
+
+        if ($previousOwnerId !== $prospect->owner_id) {
+            $this->timeline->record(
+                leadId: $prospect->id,
+                eventType: 'lead.owner_changed',
+                payload: [
+                    'from_owner_id' => $previousOwnerId,
+                    'to_owner_id' => $prospect->owner_id,
+                ],
+                actorType: 'user',
+                actorId: $user->id,
+                source: 'crm',
+                refType: 'prospect',
+                refId: $prospect->id
+            );
+        }
+
+        $nextFollowUpDate = $prospect->next_follow_up_date?->toDateString();
+        if ($previousFollowUpDate !== $nextFollowUpDate && $nextFollowUpDate !== null) {
+            $this->timeline->record(
+                leadId: $prospect->id,
+                eventType: 'lead.followup_scheduled',
+                payload: [
+                    'from' => $previousFollowUpDate,
+                    'to' => $nextFollowUpDate,
+                ],
+                actorType: 'user',
+                actorId: $user->id,
+                source: 'crm',
+                refType: 'prospect',
+                refId: $prospect->id
+            );
+        }
+
         $this->saveDailyLogIfExists($validated, $prospect, $user);
+        $this->snapshotService->recomputeLead($prospect->fresh());
 
         return redirect()->route('prospects.show', $prospect)->with('status', 'Prospek berhasil diperbarui.');
     }
@@ -351,16 +499,16 @@ class ProspectController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:120'],
             'source' => ['nullable', 'in:'.implode(',', Prospect::SOURCES)],
-            'account_category' => ['required', 'in:'.implode(',', Prospect::ACCOUNT_CATEGORIES)],
+            'account_category' => ['nullable', 'in:'.implode(',', Prospect::ACCOUNT_CATEGORIES)],
             'user_temperature' => ['nullable', 'in:'.implode(',', Prospect::USER_TEMPERATURES)],
             'dominant_emotion' => ['nullable', 'in:'.implode(',', Prospect::DOMINANT_EMOTIONS)],
             'main_objection' => ['nullable', 'string'],
             'gpt_mode' => ['nullable', 'in:'.implode(',', Prospect::GPT_MODES)],
             'bridge_candidate' => ['nullable', 'boolean'],
-            'bridge_status' => ['required', 'in:'.implode(',', Prospect::BRIDGE_STATUSES)],
+            'bridge_status' => ['nullable', 'in:'.implode(',', Prospect::BRIDGE_STATUSES)],
             'lost_reason' => ['nullable', 'in:'.implode(',', Prospect::LOST_REASONS)],
-            'status' => ['required', 'in:'.implode(',', Prospect::STATUSES)],
-            'priority' => ['required', 'integer', 'min:1', 'max:3'],
+            'status' => ['nullable', 'in:'.implode(',', Prospect::STATUSES)],
+            'priority' => ['nullable', 'integer', 'min:1', 'max:3'],
             'estimation_value' => ['nullable', 'numeric', 'min:0'],
             'next_follow_up_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
@@ -377,7 +525,7 @@ class ProspectController extends Controller
             return;
         }
 
-        ProspectLog::create([
+        $log = ProspectLog::create([
             'log_date' => now()->toDateString(),
             'activity_type' => $validated['daily_activity_type'],
             'summary' => $validated['daily_summary'],
@@ -390,6 +538,23 @@ class ProspectController extends Controller
             'prospect_id' => $prospect->id,
             'user_id' => $user->id,
         ]);
+
+        $this->timeline->record(
+            leadId: $prospect->id,
+            eventType: 'lead.activity_logged',
+            payload: [
+                'activity_type' => $log->activity_type,
+                'summary' => $log->summary,
+                'result' => $log->result,
+            ],
+            actorType: 'user',
+            actorId: $user->id,
+            source: 'crm',
+            refType: 'prospect_log',
+            refId: $log->id
+        );
+
+        $this->snapshotService->recomputeLead($prospect->fresh());
     }
 
     private function applyFilters(Builder $query, Request $request): Builder
@@ -469,15 +634,17 @@ class ProspectController extends Controller
 
     private function buildProspectPayload(array $validated, User $owner, ?Prospect $existingProspect = null): array
     {
-        $accountCategory = $validated['account_category'];
+        $accountCategory = $validated['account_category'] ?? $existingProspect?->account_category ?? 'reguler';
         $defaultGptMode = $accountCategory === 'mini' ? 'mini' : 'regular';
         $existingCategory = $existingProspect?->account_category;
         $isBridgeMoved = $existingCategory === 'mini' && $accountCategory === 'reguler';
         $bridgeCandidate = (bool) ($validated['bridge_candidate'] ?? $existingProspect?->bridge_candidate ?? false);
-        $bridgeStatus = $validated['bridge_status'] ?? $existingProspect?->bridge_status ?? 'none';
+        $bridgeStatus = $validated['bridge_status'] ?? $existingProspect?->bridge_status ?? ($bridgeCandidate ? 'identified' : 'none');
         $lastContactAt = (! empty($validated['daily_summary']) || ! empty($validated['daily_result']))
             ? now()
             : $existingProspect?->last_contact_at;
+        $status = $validated['status'] ?? $existingProspect?->status ?? Prospect::STATUS_BARU;
+        $priority = (int) ($validated['priority'] ?? $existingProspect?->priority ?? 2);
 
         if ($isBridgeMoved) {
             $bridgeCandidate = true;
@@ -503,8 +670,8 @@ class ProspectController extends Controller
             'bridge_status' => $bridgeStatus,
             'lost_reason' => $validated['lost_reason'] ?? null,
             'last_contact_at' => $lastContactAt,
-            'status' => $validated['status'],
-            'priority' => $validated['priority'],
+            'status' => $status,
+            'priority' => $priority,
             'estimation_value' => $validated['estimation_value'] ?? 0,
             'next_follow_up_date' => $validated['next_follow_up_date'] ?? null,
             'notes' => $validated['notes'] ?? null,
