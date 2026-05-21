@@ -40,6 +40,7 @@ import { ProspectsPage } from "@/pages/ProspectsPage";
 import { ProspectCreatePage, ProspectEditPage } from "@/pages/ProspectFormPage";
 import { ProspectDetailPage } from "@/pages/ProspectDetailPage";
 import { UsersPage } from "@/pages/UsersPage";
+import { WaWebviewPage } from "@/pages/WaWebviewPage";
 
 const queryClient = new QueryClient();
 
@@ -274,6 +275,7 @@ function AppShell() {
                         <Route path="/prospects" component={ProspectsPage} />
                         <Route path="/pipeline" component={PipelinePage} />
                         <Route path="/queue" component={QueuePage} />
+                        <Route path="/wa-webview" component={WaWebviewPage} />
                         <Route
                             path="/manager-insights"
                             component={ManagerInsightsPage}

@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat-reviews/{chatReview}/edit', ReactAppController::class)->name('chat-reviews.edit');
     Route::get('/knowledge-queue', ReactAppController::class)->name('knowledge-queue.index');
     Route::get('/users', ReactAppController::class)->name('users.index');
-    Route::get('/wa-webview', [WhatsAppWebJsController::class, 'index'])->name('wa-webview.index');
+    Route::get('/wa-webview', ReactAppController::class)->name('wa-webview.index');
     Route::match(['GET', 'POST'], '/wa-webjs-api/{path?}', [WhatsAppWebJsController::class, 'proxy'])
         ->where('path', '.*')
         ->name('wa-webview.proxy');
